@@ -44,7 +44,7 @@ class GlobalData():
             self.nE=int(lines[9].split()[2])
     
         
-def load_data_from_file( lines,grid):
+def load_data_from_file(lines,grid):
             #Szukanie *Node
             i=0 
             while i<len(lines) and lines[i].strip() !="*Node":
