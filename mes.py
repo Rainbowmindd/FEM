@@ -5,11 +5,11 @@ class Node():
         self.y=y
         
 class Element():
-    def __init__(self,ID,Jakobian):
+    def __init__(self,ID,Jakobian=None): #domyslna wartosc dla jakobianu
         
         self.ID=ID
         #lab3:
-        self.Jakobian=None #Potem przypisujemy wartosc
+        self.Jakobian=Jakobian
         
 class Grid():
     def __init__(self,nN,nE):
@@ -29,7 +29,7 @@ class Grid():
             print(f"Element {i+1}: Wezly {element.ID}")
             
 class Jakobian:
-    def _init_(self,dN_ksi,dN_eta,element_nodes):
+    def __init__(self):
         self.J=[[0,0],[0,0]] #2x2 matrix J
         self.J1=[[0,0],[0,0]] #2x2 matrix J^-1
         self.detJ=0 #wyznacznik
@@ -40,10 +40,10 @@ class Jakobian:
         
         #derivatives, calculate J
         #J[4][4]
-        self.J[0][0]=sum(dN_ksi[i]*x[i] for i in range(4)) #dx/dksi
-        self.J[0][1]=sum(dN_ksi[i]*y[i] for i in range(4)) #dy/dksi
-        self.J[1][0]=sum(dN_eta[i]*x[i] for i in range(4)) #dx/deta
-        self.J[1][1]=sum(dN_eta[i]*y[i] for i in range(4)) #dy/deta
+        self.J[0][0] = sum(dN_ksi[i][0] * x[i] for i in range(4))  # dx/dksi
+        self.J[0][1] = sum(dN_ksi[i][0] * y[i] for i in range(4))  # dy/dksi
+        self.J[1][0] = sum(dN_eta[i][0] * x[i] for i in range(4))  # dx/deta
+        self.J[1][1] = sum(dN_eta[i][0] * y[i] for i in range(4))  # dy/deta
         
         #wyznacznik
         self.detJ=self.J[0][0] * self.J[1][1] -self.J[0][1] *self.J[1][0]
@@ -57,7 +57,7 @@ class Jakobian:
        
 
 class ElementUniv: #element uniwersalny,niezalezny od siatki
-    def _init_(self,npc):
+    def __init__(self,npc):
         #dN_dksi and dN_deta (pochodne funkcji ksztaltu)
         self.dN_dksi=[[0] * 4 for _ in range(npc)] #npc x 4
         self.dN_deta=[[0] * 4 for _ in range(npc)] 
@@ -141,16 +141,30 @@ data=GlobalData(lines)
 grid = Grid(data.nN,data.nE)#tworzenie obiektu grid
            
 load_data_from_file(lines,grid)
-grid.display_nodes()
-grid.display_elements()
+
 
 #---LAB 3 Jakobian---------------------------------------------
 #4 integration points
 npc=4
 elem_univ=ElementUniv(npc)
 
-#Jacobian calc Solution
-for i in range(npc):
-    print(f"\n Punkt calkowania nr: {i+1}")
-    print(f"Pochodne od ksi (e): {elem_univ.dN_dksi[i]}")
-    print(f"Pochodne od eta (n): {elem_univ.dN_deta[i]}")
+#Jakobian calc for every element
+for element in grid.elements:
+    
+    element_nodes=[grid.nodes[id-1] for id in element.ID] #id-1 bo nodeID
+    #zaczyna się od 1
+    
+    #Jakobian calc for every element
+    jakobian=Jakobian()
+    jakobian.calc_jakobian(elem_univ.dN_dksi, elem_univ.dN_deta, element_nodes)
+
+    
+    #element stores our computed jakobian
+    element.Jakobian=jakobian
+    
+    print(f"Jakobian dla elementu: {element.ID}: ")
+    for row in element.Jakobian.J:
+        print(row)
+    
+grid.display_nodes()
+grid.display_elements()
