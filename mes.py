@@ -5,8 +5,11 @@ class Node():
         self.y=y
         
 class Element():
-    def __init__(self,ID):
+    def __init__(self,ID,Jakobian):
+        
         self.ID=ID
+        #lab3:
+        self.Jakobian=None #Potem przypisujemy wartosc
         
 class Grid():
     def __init__(self,nN,nE):
@@ -24,8 +27,62 @@ class Grid():
         print("\nId wezlow poszczegolnych elementow: \n")
         for i, element in enumerate(self.elements):
             print(f"Element {i+1}: Wezly {element.ID}")
-       
+            
+class Jakobian:
+    def _init_(self,dN_ksi,dN_eta,element_nodes):
+        self.J=[[0,0],[0,0]] #2x2 matrix J
+        self.J1=[[0,0],[0,0]] #2x2 matrix J^-1
+        self.detJ=0 #wyznacznik
+    
+    def calc_jakobian(self,dN_ksi,dN_eta,element_nodes):
+        x=[node.x for node in element_nodes]
+        y=[node.y for node in element_nodes]
         
+        #derivatives, calculate J
+        #J[4][4]
+        self.J[0][0]=sum(dN_ksi[i]*x[i] for i in range(4)) #dx/dksi
+        self.J[0][1]=sum(dN_ksi[i]*y[i] for i in range(4)) #dy/dksi
+        self.J[1][0]=sum(dN_eta[i]*x[i] for i in range(4)) #dx/deta
+        self.J[1][1]=sum(dN_eta[i]*y[i] for i in range(4)) #dy/deta
+        
+        #wyznacznik
+        self.detJ=self.J[0][0] * self.J[1][1] -self.J[0][1] *self.J[1][0]
+       
+        #J1[4][4]
+        #inversion - odwracanie macierzy
+        self.J1[0][0] = self.J[1][1] / self.detJ
+        self.J1[0][1] = -self.J[0][1] / self.detJ
+        self.J1[1][0] = -self.J[1][0] / self.detJ
+        self.J1[1][1] = self.J[0][0] / self.detJ
+       
+
+class ElementUniv: #element uniwersalny,niezalezny od siatki
+    def _init_(self,npc):
+        #dN_dksi and dN_deta (pochodne funkcji ksztaltu)
+        self.dN_dksi=[[0] * 4 for _ in range(npc)] #npc x 4
+        self.dN_deta=[[0] * 4 for _ in range(npc)] 
+        
+        #Integration points
+        coordinate=1.0/(3**0.5) 
+        points=[
+            (-coordinate, -coordinate),
+            (coordinate, -coordinate),
+            (coordinate, coordinate),
+            (-coordinate, coordinate)
+        ]
+        
+        #initialize derivatives for every integration point
+
+        for i, (ksi,eta) in enumerate(points):
+            self.dN_dksi[i][0]=-0.25*(1-eta) #dN1/dksi
+            self.dN_dksi[i][1]=0.25*(1-eta) #...
+            self.dN_dksi[i][2]=0.25*(1+eta)
+            self.dN_dksi[i][3]=-0.25*(1+eta) #dN4/dksi
+            
+            self.dN_deta[i][0]=-0.25*(1-ksi) #dN1/deta
+            self.dN_deta[i][1]=-0.25*(1+ksi) 
+            self.dN_deta[i][2]=0.25*(1+ksi) 
+            self.dN_deta[i][3]=0.25*(1-ksi) #dN4/deta
 
 class GlobalData():
     def __init__(self, lines):
@@ -73,6 +130,9 @@ def load_data_from_file(lines,grid):
                 grid.elements.append(Element(nodeID))
                 i+=1
                 
+            #lab 3 :
+            npc=(0,0)
+                
         
 file = open('Test1_4_4.txt', 'r')
 lines=file.readlines()
@@ -84,4 +144,13 @@ load_data_from_file(lines,grid)
 grid.display_nodes()
 grid.display_elements()
 
-       
+#---LAB 3 Jakobian---------------------------------------------
+#4 integration points
+npc=4
+elem_univ=ElementUniv(npc)
+
+#Jacobian calc Solution
+for i in range(npc):
+    print(f"\n Punkt calkowania nr: {i+1}")
+    print(f"Pochodne od ksi (e): {elem_univ.dN_dksi[i]}")
+    print(f"Pochodne od eta (n): {elem_univ.dN_deta[i]}")
