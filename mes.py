@@ -40,10 +40,10 @@ class Jakobian:
         
         #derivatives, calculate J
         #J[4][4]
-        self.J[0][0] = sum(dN_ksi[i][0] * x[i] for i in range(4))  # dx/dksi
-        self.J[0][1] = sum(dN_ksi[i][0] * y[i] for i in range(4))  # dy/dksi
-        self.J[1][0] = sum(dN_eta[i][0] * x[i] for i in range(4))  # dx/deta
-        self.J[1][1] = sum(dN_eta[i][0] * y[i] for i in range(4))  # dy/deta
+        self.J[0][0] = sum(dN_ksi[i] * x[i] for i in range(4))  # dx/dksi
+        self.J[0][1] = sum(dN_ksi[i] * y[i] for i in range(4))  # dy/dksi
+        self.J[1][0] = sum(dN_eta[i] * x[i] for i in range(4))  # dx/deta
+        self.J[1][1] = sum(dN_eta[i] * y[i] for i in range(4))  # dy/deta
         
         #wyznacznik
         self.detJ=self.J[0][0] * self.J[1][1] -self.J[0][1] *self.J[1][0]
@@ -153,18 +153,22 @@ for element in grid.elements:
     
     element_nodes=[grid.nodes[id-1] for id in element.ID] #id-1 bo nodeID
     #zaczyna się od 1
+    jakobians=[]
     
-    #Jakobian calc for every element
-    jakobian=Jakobian()
-    jakobian.calc_jakobian(elem_univ.dN_dksi, elem_univ.dN_deta, element_nodes)
+    #Jakobian calc for every point of integration
+    for i in range(npc):
+        jakobian=Jakobian()
+        jakobian.calc_jakobian(elem_univ.dN_dksi[i], elem_univ.dN_deta[i], element_nodes)
+        jakobians.append(jakobian) #add to jakobians[]
 
     
     #element stores our computed jakobian
     element.Jakobian=jakobian
     
-    print(f"Jakobian dla elementu: {element.ID}: ")
-    for row in element.Jakobian.J:
-        print(row)
+    for j, jakobian in enumerate(jakobians):
+        print(f"Jakobian dla elementu: {element.ID}:  \nw punkcie całkowania pc{j+1}: ")
+        for row in jakobian.J:
+            print(row)
     
 grid.display_nodes()
 grid.display_elements()
