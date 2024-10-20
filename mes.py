@@ -154,12 +154,13 @@ for element in grid.elements:
     element_nodes=[grid.nodes[id-1] for id in element.ID] #id-1 bo nodeID
     #zaczyna się od 1
     jakobians=[]
-    
+   
     #Jakobian calc for every point of integration
     for i in range(npc):
         jakobian=Jakobian()
         jakobian.calc_jakobian(elem_univ.dN_dksi[i], elem_univ.dN_deta[i], element_nodes)
         jakobians.append(jakobian) #add to jakobians[]
+
 
     
     #element stores our computed jakobian
@@ -169,6 +170,15 @@ for element in grid.elements:
         print(f"Jakobian dla elementu: {element.ID}:  \nw punkcie całkowania pc{j+1}: ")
         for row in jakobian.J:
             print(row)
+        print("\nInverted Jakobian: ")
+        for row in jakobian.J1:
+            print(row)
+        print(f"detJ: ")
+        print(jakobian.detJ)
+        print("\n")
+
+        
+        
     
 grid.display_nodes()
 grid.display_elements()
