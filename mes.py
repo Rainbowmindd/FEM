@@ -134,13 +134,21 @@ def load_data_from_file(lines,grid):
             npc=(0,0)
                 
         
-file = open('Test1_4_4.txt', 'r')
-lines=file.readlines()
-file.close()
-data=GlobalData(lines)
-grid = Grid(data.nN,data.nE)#tworzenie obiektu grid
+
+
+#Grid dla przykladu z prezentacji do jakobianow---------------------------
+grid_przyklad=Grid(4,1) #4 nodes 1 element 
+grid_przyklad.nodes.append(Node(0, 0))          
+grid_przyklad.nodes.append(Node(0.025, 0))      
+grid_przyklad.nodes.append(Node(0.025, 0.025))  
+grid_przyklad.nodes.append(Node(0, 0.025))
+
+grid_przyklad.elements.append(Element([1, 2, 3, 4]))
+
+grid_przyklad.display_nodes()
+grid_przyklad.display_elements()
            
-load_data_from_file(lines,grid)
+
 
 
 #---LAB 3 Jakobian---------------------------------------------
@@ -149,11 +157,9 @@ npc=4
 elem_univ=ElementUniv(npc)
 
 #Jakobian calc for every element
-for element in grid.elements:
-    
-    element_nodes=[grid.nodes[id-1] for id in element.ID] #id-1 bo nodeID
-    #zaczyna się od 1
-    jakobians=[]
+for element in grid_przyklad.elements:
+    element_nodes = [grid_przyklad.nodes[id-1] for id in element.ID]  # ID węzłów zaczyna się od 1
+    jakobians = []
    
     #Jakobian calc for every point of integration
     for i in range(npc):
@@ -177,8 +183,34 @@ for element in grid.elements:
         print(jakobian.detJ)
         print("\n")
 
-        
-        
+file = open('Test1_4_4.txt', 'r')
+lines=file.readlines()
+file.close()
+
+data=GlobalData(lines)
+grid = Grid(data.nN,data.nE)#tworzenie obiektu grid        
+
+load_data_from_file(lines,grid)      
     
 grid.display_nodes()
 grid.display_elements()
+
+# Obliczenia jakobianu dla elementów wczytanych z pliku
+for element in grid.elements:
+    element_nodes = [grid.nodes[id-1] for id in element.ID]  # ID węzłów zaczyna się od 1
+    jakobians = []
+    
+    for i in range(npc):
+        jakobian = Jakobian()
+        jakobian.calc_jakobian(elem_univ.dN_dksi[i], elem_univ.dN_deta[i], element_nodes)
+        jakobians.append(jakobian)
+    
+    # Wyświetlanie wyników dla elementów wczytanych z pliku
+    for j, jakobian in enumerate(jakobians):
+        print(f"Jakobian dla elementu: {element.ID}: \nw punkcie całkowania pc{j+1}: ")
+        for row in jakobian.J:
+            print(row)
+        print("\nInverted Jakobian: ")
+        for row in jakobian.J1:
+            print(row)
+        print(f"detJ: {jakobian.detJ}\n")
