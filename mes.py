@@ -40,10 +40,10 @@ class Jakobian:
         
         #derivatives, calculate J
         #J[4][4]
-        self.J[0][0] = sum(dN_ksi[i] * x[i] for i in range(4))  # dx/dksi
-        self.J[0][1] = sum(dN_ksi[i] * y[i] for i in range(4))  # dy/dksi
-        self.J[1][0] = sum(dN_eta[i] * x[i] for i in range(4))  # dx/deta
-        self.J[1][1] = sum(dN_eta[i] * y[i] for i in range(4))  # dy/deta
+        self.J[0][0] = sum(dN_ksi[i] * x[i] for i in range(npc))  # dx/dksi
+        self.J[0][1] = sum(dN_ksi[i] * y[i] for i in range(npc))  # dy/dksi
+        self.J[1][0] = sum(dN_eta[i] * x[i] for i in range(npc))  # dx/deta
+        self.J[1][1] = sum(dN_eta[i] * y[i] for i in range(npc))  # dy/deta
         
         #wyznacznik
         self.detJ=self.J[0][0] * self.J[1][1] -self.J[0][1] *self.J[1][0]
