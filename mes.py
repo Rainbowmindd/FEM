@@ -39,7 +39,7 @@ class Jakobian:
         y=[node.y for node in element_nodes]
         
         #derivatives, calculate J
-        #J[4][4]
+        #J[2][2]
         self.J[0][0] = sum(dN_ksi[i] * x[i] for i in range(npc))  # dx/dksi
         self.J[0][1] = sum(dN_ksi[i] * y[i] for i in range(npc))  # dy/dksi
         self.J[1][0] = sum(dN_eta[i] * x[i] for i in range(npc))  # dx/deta
@@ -48,7 +48,7 @@ class Jakobian:
         #wyznacznik
         self.detJ=self.J[0][0] * self.J[1][1] -self.J[0][1] *self.J[1][0]
        
-        #J1[4][4]
+        #J1[2][2]
         #inversion - odwracanie macierzy
         self.J1[0][0] = self.J[1][1] / self.detJ
         self.J1[0][1] = -self.J[0][1] / self.detJ
@@ -59,7 +59,7 @@ class Jakobian:
 class ElementUniv: #element uniwersalny,niezalezny od siatki
     def __init__(self,npc):
         #dN_dksi and dN_deta (pochodne funkcji ksztaltu)
-        self.dN_dksi=[[0] * 4 for _ in range(npc)] #npc x 4
+        self.dN_dksi=[[0] * 4 for _ in range(npc)] #npc x 4(nodes)
         self.dN_deta=[[0] * 4 for _ in range(npc)] 
         
         #Integration points
@@ -67,8 +67,8 @@ class ElementUniv: #element uniwersalny,niezalezny od siatki
         points=[
             (-coordinate, -coordinate),
             (coordinate, -coordinate),
-            (coordinate, coordinate),
-            (-coordinate, coordinate)
+            (-coordinate, coordinate),
+            (coordinate, coordinate)
         ]
         
         #initialize derivatives for every integration point
@@ -132,7 +132,46 @@ def load_data_from_file(lines,grid):
                 
             #lab 3 :
             npc=(0,0)
-                
+#LAB 4 matrix H----------------------------
+def calculate_H(jakobian, elem_univ, weight, detJ):
+    H = [[0.0 for _ in range(4)] for _ in range(4)]
+    
+    # wyniki dla dN/dx i dN/dy
+    dN_dx_table = [[0.0] * 4 for _ in range(len(elem_univ.dN_dksi))]
+    dN_dy_table = [[0.0] * 4 for _ in range(len(elem_univ.dN_dksi))]
+
+    # H w punkcie całkowania
+    for i in range(len(elem_univ.dN_dksi)):
+        dN_dksi = elem_univ.dN_dksi[i]
+        dN_deta = elem_univ.dN_deta[i]
+
+        # calc dN/dx  dN/dy
+        for j in range(4):
+            dN_dx = jakobian.J1[0][0] * dN_dksi[j] + jakobian.J1[0][1] * dN_deta[j]
+            dN_dy = jakobian.J1[1][0] * dN_dksi[j] + jakobian.J1[1][1] * dN_deta[j]
+            
+            # save resu;t
+            dN_dx_table[i][j] = dN_dx
+            dN_dy_table[i][j] = dN_dy
+
+        # Sum H
+        for j in range(4):
+            for k in range(4):
+                H[j][k] += (dN_dx_table[i][j] * dN_dx_table[i][k] + dN_dy_table[i][j] * dN_dy_table[i][k]) * weight * detJ 
+
+    
+    print("Tabela dN/dx:")
+    print("pc   dN1/dx   dN2/dx   dN3/dx   dN4/dx")
+    for i in range(len(dN_dx_table)):
+        print(f"pc{i + 1} {dN_dx_table[i][0]:8.4f} {dN_dx_table[i][1]:8.4f} {dN_dx_table[i][2]:8.4f} {dN_dx_table[i][3]:8.4f}")
+
+    print("\nTabela dN/dy:")
+    print("pc   dN1/dy   dN2/dy   dN3/dy   dN4/dy")
+    for i in range(len(dN_dy_table)):
+        print(f"pc{i + 1} {dN_dy_table[i][0]:8.4f} {dN_dy_table[i][1]:8.4f} {dN_dy_table[i][2]:8.4f} {dN_dy_table[i][3]:8.4f}")   
+
+    return H
+
         
 
 
@@ -173,15 +212,23 @@ for element in grid_przyklad.elements:
     element.Jakobian=jakobian
     
     for j, jakobian in enumerate(jakobians):
-        print(f"Jakobian dla elementu: {element.ID}:  \nw punkcie całkowania pc{j+1}: ")
-        for row in jakobian.J:
-            print(row)
-        print("\nInverted Jakobian: ")
-        for row in jakobian.J1:
-            print(row)
-        print(f"detJ: ")
-        print(jakobian.detJ)
-        print("\n")
+        # print(f"Jakobian dla elementu: {element.ID}:  \nw punkcie całkowania pc{j+1}: ")
+        # for row in jakobian.J:
+        #     print(row)
+        # print("\nInverted Jakobian: ")
+        # for row in jakobian.J1:
+        #     print(row)
+        # print(f"detJ: ")
+        # print(jakobian.detJ)
+        # print("\n")
+        
+        # Wywołanie calculate_H tylko dla przykładu
+        if element.ID == [1, 2, 3, 4]:  # Sprawdzenie, czy to ten konkretny element
+            weight = 1.0  # Przykładowa wartość wagi
+            H_matrix = calculate_H(jakobian, elem_univ, weight, jakobian.detJ)
+
+         
+
 
 file = open('Test1_4_4.txt', 'r')
 lines=file.readlines()
@@ -192,25 +239,28 @@ grid = Grid(data.nN,data.nE)#tworzenie obiektu grid
 
 load_data_from_file(lines,grid)      
     
-grid.display_nodes()
-grid.display_elements()
+# grid.display_nodes()
+# grid.display_elements()
 
 # Obliczenia jakobianu dla elementów wczytanych z pliku
-for element in grid.elements:
-    element_nodes = [grid.nodes[id-1] for id in element.ID]  # ID węzłów zaczyna się od 1
-    jakobians = []
+# for element in grid.elements:
+#     element_nodes = [grid.nodes[id-1] for id in element.ID]  # ID węzłów zaczyna się od 1
+#     jakobians = []
     
-    for i in range(npc):
-        jakobian = Jakobian()
-        jakobian.calc_jakobian(elem_univ.dN_dksi[i], elem_univ.dN_deta[i], element_nodes)
-        jakobians.append(jakobian)
+#     for i in range(npc):
+#         jakobian = Jakobian()
+#         jakobian.calc_jakobian(elem_univ.dN_dksi[i], elem_univ.dN_deta[i], element_nodes)
+#         jakobians.append(jakobian)
     
-    # Wyświetlanie wyników dla elementów wczytanych z pliku
-    for j, jakobian in enumerate(jakobians):
-        print(f"Jakobian dla elementu: {element.ID}: \nw punkcie całkowania pc{j+1}: ")
-        for row in jakobian.J:
-            print(row)
-        print("\nInverted Jakobian: ")
-        for row in jakobian.J1:
-            print(row)
-        print(f"detJ: {jakobian.detJ}\n")
+#     # Wyświetlanie wyników dla elementów wczytanych z pliku
+#     for j, jakobian in enumerate(jakobians):
+#         print(f"Jakobian dla elementu: {element.ID}: \nw punkcie całkowania pc{j+1}: ")
+#         for row in jakobian.J:
+#             print(row)
+#         print("\nInverted Jakobian: ")
+#         for row in jakobian.J1:
+#             print(row)
+#         print(f"detJ: {jakobian.detJ}\n")
+        
+
+
