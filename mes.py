@@ -134,7 +134,7 @@ def load_data_from_file(lines,grid):
             npc=(0,0)
 #LAB 4 matrix H----------------------------
 def calculate_H(jakobian, elem_univ, weight, detJ):
-    H = [[0.0 for _ in range(4)] for _ in range(4)]
+    H = [[0.0 for _ in range(4)] for _ in range(4)] #H[4][4]
     
     # wyniki dla dN/dx i dN/dy
     dN_dx_table = [[0.0] * 4 for _ in range(len(elem_univ.dN_dksi))]
@@ -154,13 +154,22 @@ def calculate_H(jakobian, elem_univ, weight, detJ):
             dN_dx_table[i][j] = dN_dx
             dN_dy_table[i][j] = dN_dy
 
+        #temporary H for each npc
+        H_temp=[[0.0 for _ in range(4)] for _ in range(4)]
+
         # Sum H
         for j in range(4):
             for k in range(4):
-                H[j][k] += (dN_dx_table[i][j] * dN_dx_table[i][k] + dN_dy_table[i][j] * dN_dy_table[i][k]) * weight * detJ 
+                H_temp[j][k] += (dN_dx_table[i][j] * dN_dx_table[i][k] + dN_dy_table[i][j] * dN_dy_table[i][k]) * weight * detJ 
+                H[j][k]+=H_temp[j][k]
+
+        #H_temp for actual npc
+        print(f"\n Macierz H dla punktu calkowania pc{i+1}:")
+        for row in H_temp:
+            print(" ".join(f"{value:8.4f}" for value in row))
 
     
-    print("Tabela dN/dx:")
+    print("\nTabela dN/dx:")
     print("pc   dN1/dx   dN2/dx   dN3/dx   dN4/dx")
     for i in range(len(dN_dx_table)):
         print(f"pc{i + 1} {dN_dx_table[i][0]:8.4f} {dN_dx_table[i][1]:8.4f} {dN_dx_table[i][2]:8.4f} {dN_dx_table[i][3]:8.4f}")
@@ -168,7 +177,12 @@ def calculate_H(jakobian, elem_univ, weight, detJ):
     print("\nTabela dN/dy:")
     print("pc   dN1/dy   dN2/dy   dN3/dy   dN4/dy")
     for i in range(len(dN_dy_table)):
-        print(f"pc{i + 1} {dN_dy_table[i][0]:8.4f} {dN_dy_table[i][1]:8.4f} {dN_dy_table[i][2]:8.4f} {dN_dy_table[i][3]:8.4f}")   
+        print(f"pc{i + 1} {dN_dy_table[i][0]:8.4f} {dN_dy_table[i][1]:8.4f} {dN_dy_table[i][2]:8.4f} {dN_dy_table[i][3]:8.4f}")  
+
+    print("\nMACIERZ H: ") 
+    for row in H:
+        print(" ".join(f"{value:8.4f}" for value in row))
+        
 
     return H
 
@@ -224,8 +238,10 @@ for element in grid_przyklad.elements:
         
         # Wywołanie calculate_H tylko dla przykładu
         if element.ID == [1, 2, 3, 4]:  # Sprawdzenie, czy to ten konkretny element
-            weight = 1.0  # Przykładowa wartość wagi
+            weight = 1.0  
             H_matrix = calculate_H(jakobian, elem_univ, weight, jakobian.detJ)
+            
+            
 
          
 
