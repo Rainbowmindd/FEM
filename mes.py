@@ -136,6 +136,7 @@ def load_data_from_file(lines,grid):
 def calculate_H(jakobian, elem_univ, weight, detJ):
     H = [[0.0 for _ in range(4)] for _ in range(4)] #H[4][4]
     
+    
     # wyniki dla dN/dx i dN/dy
     dN_dx_table = [[0.0] * 4 for _ in range(len(elem_univ.dN_dksi))]
     dN_dy_table = [[0.0] * 4 for _ in range(len(elem_univ.dN_dksi))]
@@ -164,9 +165,9 @@ def calculate_H(jakobian, elem_univ, weight, detJ):
                 H[j][k]+=H_temp[j][k]
 
         #H_temp for actual npc
-        print(f"\n Macierz H dla punktu calkowania pc{i+1}:")
-        for row in H_temp:
-            print(" ".join(f"{value:8.4f}" for value in row))
+        # print(f"\n Macierz H dla punktu calkowania pc{i+1}:")
+        # for row in H_temp:
+        #     print(" ".join(f"{value:8.4f}" for value in row))
 
     
     print("\nTabela dN/dx:")
@@ -226,15 +227,15 @@ for element in grid_przyklad.elements:
     element.Jakobian=jakobian
     
     for j, jakobian in enumerate(jakobians):
-        # print(f"Jakobian dla elementu: {element.ID}:  \nw punkcie całkowania pc{j+1}: ")
-        # for row in jakobian.J:
-        #     print(row)
-        # print("\nInverted Jakobian: ")
-        # for row in jakobian.J1:
-        #     print(row)
-        # print(f"detJ: ")
-        # print(jakobian.detJ)
-        # print("\n")
+        print(f"Jakobian dla elementu: {element.ID}:  \nw punkcie całkowania pc{j+1}: ")
+        for row in jakobian.J:
+            print(row)
+        print("\nInverted Jakobian: ")
+        for row in jakobian.J1:
+            print(row)
+        print(f"detJ: ")
+        print(jakobian.detJ)
+        print("\n")
         
         # Wywołanie calculate_H tylko dla przykładu
         if element.ID == [1, 2, 3, 4]:  # Sprawdzenie, czy to ten konkretny element
