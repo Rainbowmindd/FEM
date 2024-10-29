@@ -131,12 +131,14 @@ def load_data_from_file(lines,grid):
                 i+=1
                 
             #lab 3 :
-            npc=(0,0)
+            
 #LAB 4 matrix H----------------------------
 def calculate_H(jakobian, elem_univ, weight, detJ):
     H = [[0.0 for _ in range(4)] for _ in range(4)] #H[4][4]
     
-    
+    #osobne partial matrices H dN_dx*dN_dx i dN_dy*dN_dy for each integration point
+    HpcX=[]
+    HpcY=[]
     # wyniki dla dN/dx i dN/dy
     dN_dx_table = [[0.0] * 4 for _ in range(len(elem_univ.dN_dksi))]
     dN_dy_table = [[0.0] * 4 for _ in range(len(elem_univ.dN_dksi))]
@@ -145,7 +147,7 @@ def calculate_H(jakobian, elem_univ, weight, detJ):
     for i in range(len(elem_univ.dN_dksi)):
         dN_dksi = elem_univ.dN_dksi[i]
         dN_deta = elem_univ.dN_deta[i]
-        weight_ksi, weight_eta = weights[i]
+       
 
         # calc dN/dx  dN/dy
         for j in range(4):
@@ -155,20 +157,40 @@ def calculate_H(jakobian, elem_univ, weight, detJ):
             # save resu;t
             dN_dx_table[i][j] = dN_dx
             dN_dy_table[i][j] = dN_dy
+        
+        localX=[] #lokalne macierze dla obecnego punktu calkowania in range npc
+        localY=[]
+
+        for x in range(npc): #uwzgledniamy transpozycje
+            rowX=[]
+            rowY=[]
+            for y in range(npc):
+                rowX.append(dN_dx_table[i][x]*dN_dx_table[i][y])
+                rowY.append(dN_dy_table[i][x]*dN_dy_table[i][y])
+            localX.append(rowX)
+            localY.append(rowY)
+
+        HpcX.append(localX)
+        HpcY.append(localY)
 
         # Sum H
         for j in range(4):
             for k in range(4):
-                H_temp[j][k] += (dN_dx_table[i][j] * dN_dx_table[i][k] + dN_dy_table[i][j] * dN_dy_table[i][k]) * weight * detJ 
-                H[j][k]+=H_temp[j][k]
+                H[j][k] += (HpcX[i][j][k] + HpcY[i][j][k]) * weight * detJ *30
 
-        #H_temp for actual npc
-        # print(f"\n Macierz H dla punktu calkowania pc{i+1}:")
-        # for row in H_temp:
-        #     print(" ".join(f"{value:8.4f}" for value in row))
+    # Wyświetlanie HpcX i HpcY dla każdego punktu całkowania
+    for idx, (matrixX, matrixY) in enumerate(zip(HpcX, HpcY), start=1):
+        print(f"\nMacierz HpcX dla punktu całkowania pc{idx}:")
+        for row in matrixX:
+            print(" ".join(f"{value:8.4f}" for value in row))
 
-                H[j][k] += (dN_dx_table[i][j] * dN_dx_table[i][k] + dN_dy_table[i][j] * dN_dy_table[i][k]) * weight_ksi * weight_eta * detJ 
-    
+        print(f"\nMacierz HpcY dla punktu całkowania pc{idx}:")
+        for row in matrixY:
+            print(" ".join(f"{value:8.4f}" for value in row))  
+
+    print(f"\nMacierz HpcY dla punktu całkowania pc{idx}:")
+    for row in matrixY:
+        print(" ".join(f"{value:8.4f}" for value in row))
     print("\nTabela dN/dx:")
     print("pc   dN1/dx   dN2/dx   dN3/dx   dN4/dx")
     for i in range(len(dN_dx_table)):
@@ -207,6 +229,7 @@ grid_przyklad.display_elements()
 #---LAB 3 Jakobian---------------------------------------------
 #4 integration points
 npc=4
+weight=1.0 
 elem_univ=ElementUniv(npc)
 
 #Jakobian calc for every element
@@ -238,7 +261,7 @@ for element in grid_przyklad.elements:
         
         # Wywołanie calculate_H tylko dla przykładu
         if element.ID == [1, 2, 3, 4]:  # Sprawdzenie, czy to ten konkretny element
-            H_matrix = calculate_H(jakobian, elem_univ, weights, jakobian.detJ)
+            H_matrix = calculate_H(jakobian, elem_univ, weight, jakobian.detJ)
             
             
 
