@@ -145,6 +145,7 @@ def calculate_H(jakobian, elem_univ, weight, detJ):
     for i in range(len(elem_univ.dN_dksi)):
         dN_dksi = elem_univ.dN_dksi[i]
         dN_deta = elem_univ.dN_deta[i]
+        weight_ksi, weight_eta = weights[i]
 
         # calc dN/dx  dN/dy
         for j in range(4):
@@ -154,9 +155,6 @@ def calculate_H(jakobian, elem_univ, weight, detJ):
             # save resu;t
             dN_dx_table[i][j] = dN_dx
             dN_dy_table[i][j] = dN_dy
-
-        #temporary H for each npc
-        H_temp=[[0.0 for _ in range(4)] for _ in range(4)]
 
         # Sum H
         for j in range(4):
@@ -169,6 +167,7 @@ def calculate_H(jakobian, elem_univ, weight, detJ):
         # for row in H_temp:
         #     print(" ".join(f"{value:8.4f}" for value in row))
 
+                H[j][k] += (dN_dx_table[i][j] * dN_dx_table[i][k] + dN_dy_table[i][j] * dN_dy_table[i][k]) * weight_ksi * weight_eta * detJ 
     
     print("\nTabela dN/dx:")
     print("pc   dN1/dx   dN2/dx   dN3/dx   dN4/dx")
@@ -178,8 +177,8 @@ def calculate_H(jakobian, elem_univ, weight, detJ):
     print("\nTabela dN/dy:")
     print("pc   dN1/dy   dN2/dy   dN3/dy   dN4/dy")
     for i in range(len(dN_dy_table)):
-        print(f"pc{i + 1} {dN_dy_table[i][0]:8.4f} {dN_dy_table[i][1]:8.4f} {dN_dy_table[i][2]:8.4f} {dN_dy_table[i][3]:8.4f}")  
-
+        print(f"pc{i + 1} {dN_dy_table[i][0]:8.4f} {dN_dy_table[i][1]:8.4f} {dN_dy_table[i][2]:8.4f} {dN_dy_table[i][3]:8.4f}") 
+ 
     print("\nMACIERZ H: ") 
     for row in H:
         print(" ".join(f"{value:8.4f}" for value in row))
@@ -225,7 +224,7 @@ for element in grid_przyklad.elements:
     
     #element stores our computed jakobian
     element.Jakobian=jakobian
-    
+    weights = [(1, 1), (1, 1), (1, 1), (1, 1)]
     for j, jakobian in enumerate(jakobians):
         print(f"Jakobian dla elementu: {element.ID}:  \nw punkcie całkowania pc{j+1}: ")
         for row in jakobian.J:
@@ -239,8 +238,7 @@ for element in grid_przyklad.elements:
         
         # Wywołanie calculate_H tylko dla przykładu
         if element.ID == [1, 2, 3, 4]:  # Sprawdzenie, czy to ten konkretny element
-            weight = 1.0  
-            H_matrix = calculate_H(jakobian, elem_univ, weight, jakobian.detJ)
+            H_matrix = calculate_H(jakobian, elem_univ, weights, jakobian.detJ)
             
             
 
