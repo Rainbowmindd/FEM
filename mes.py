@@ -1,3 +1,4 @@
+import math
 
 class Node():
     def __init__(self,x,y):
@@ -38,6 +39,8 @@ class Jakobian:
         x=[node.x for node in element_nodes]
         y=[node.y for node in element_nodes]
         
+        
+        
         #derivatives, calculate J
         #J[2][2]
         self.J[0][0] = sum(dN_ksi[i] * x[i] for i in range(npc))  # dx/dksi
@@ -59,30 +62,53 @@ class Jakobian:
 class ElementUniv: #element uniwersalny,niezalezny od siatki
     def __init__(self,npc):
         #dN_dksi and dN_deta (pochodne funkcji ksztaltu)
-        self.dN_dksi=[[0] * 4 for _ in range(npc)] #npc x 4(nodes)
-        self.dN_deta=[[0] * 4 for _ in range(npc)] 
+        self.dN_dksi=[] #npc x 4(nodes)
+        self.dN_deta=[] 
         
         #Integration points
-        coordinate=1.0/(3**0.5) 
-        points=[
-            (-coordinate, -coordinate),
-            (coordinate, -coordinate),
-            (-coordinate, coordinate),
-            (coordinate, coordinate)
-        ]
+        if npc == 9:
+            coordinate = 1.0 / (3**0.5)
+            points = [
+                (-coordinate, -coordinate),
+                (coordinate, -coordinate),
+                (-coordinate, coordinate),
+                (coordinate, coordinate),
+                (0, 0), 
+                (-coordinate, 0),
+                (coordinate, 0),
+                (0, -coordinate),
+                (0, coordinate)
+            ]
         
         #initialize derivatives for every integration point
+       
+            for ksi in points:
+                for eta in points:
+                    ksi_x, ksi_y = ksi  # Unpacking ksi tuple
+                    eta_x, eta_y = eta  # Unpacking eta tuple
 
-        for i, (ksi,eta) in enumerate(points):
-            self.dN_dksi[i][0]=-0.25*(1-eta) #dN1/dksi
-            self.dN_dksi[i][1]=0.25*(1-eta) #...
-            self.dN_dksi[i][2]=0.25*(1+eta)
-            self.dN_dksi[i][3]=-0.25*(1+eta) #dN4/dksi
-            
-            self.dN_deta[i][0]=-0.25*(1-ksi) #dN1/deta
-            self.dN_deta[i][1]=-0.25*(1+ksi) 
-            self.dN_deta[i][2]=0.25*(1+ksi) 
-            self.dN_deta[i][3]=0.25*(1-ksi) #dN4/deta
+                    self.dN_dksi.append([
+                        -0.25 * (1 - eta_y),
+                        0.25 * (1 - eta_y),
+                        0.25 * (1 + eta_y),
+                        -0.25 * (1 + eta_y)
+                    ])
+
+                    self.dN_deta.append([
+                        -0.25 * (1 - ksi_x),
+                        -0.25 * (1 + ksi_x),
+                        0.25 * (1 + ksi_x),
+                        0.25 * (1 - ksi_x)
+                    ])
+        self.printTabs()
+        
+    def printTabs(self):
+        print("dN/dksi table: ")
+        for i in range(len(self.dN_dksi)):
+            print(self.dN_dksi[i])
+        print("\ndN/deta table:  ")
+        for i in range(len(self.dN_deta)):
+            print(self.dN_deta[i])
 
 class GlobalData():
     def __init__(self, lines):
@@ -140,57 +166,59 @@ def calculate_H(jakobian, elem_univ, weight, detJ):
     HpcX=[]
     HpcY=[]
     # wyniki dla dN/dx i dN/dy
-    dN_dx_table = [[0.0] * 4 for _ in range(len(elem_univ.dN_dksi))]
-    dN_dy_table = [[0.0] * 4 for _ in range(len(elem_univ.dN_dksi))]
-
-    # H w punkcie całkowania
-    for i in range(len(elem_univ.dN_dksi)):
-        dN_dksi = elem_univ.dN_dksi[i]
-        dN_deta = elem_univ.dN_deta[i]
-       
-
-        # calc dN/dx  dN/dy
-        for j in range(4):
-            dN_dx = jakobian.J1[0][0] * dN_dksi[j] + jakobian.J1[0][1] * dN_deta[j]
-            dN_dy = jakobian.J1[1][0] * dN_dksi[j] + jakobian.J1[1][1] * dN_deta[j]
-            
-            # save resu;t
-            dN_dx_table[i][j] = dN_dx
-            dN_dy_table[i][j] = dN_dy
+    dN_dx_table = [[0 for _ in range(4)] for _ in range(npc)]
+    dN_dy_table = [[0 for _ in range(4)] for _ in range(npc)]
+    for y in range(npc):
+        for x in range(4):
+            dN_dx_table[y][x] = jakobian.J1[0][0] * ElementUniv.dN_dksi[y][x] +  jakobian.J1[0][1] * ElementUniv.dN_deta[y][x]
+            dN_dy_table[y][x] = jakobian.J1[1][0] * ElementUniv.dN_dksi[y][x] +  jakobian.J1[1][1] * ElementUniv.dN_deta[y][x]
+    print("\ndN/dx: ")
+    for i in range(len(dN_dx_table)):
+        print(dN_dx_table[i])
+    print("\ndN/dy: ")
+    for i in range(len(dN_dy_table)):
+        print(dN_dy_table[i])
         
-        localX=[] #lokalne macierze dla obecnego punktu calkowania in range npc
-        localY=[]
+        # localX=[] #lokalne macierze dla obecnego punktu calkowania in range npc
+        # localY=[]
 
-        for x in range(npc): #uwzgledniamy transpozycje
-            rowX=[]
-            rowY=[]
-            for y in range(npc):
-                rowX.append(dN_dx_table[i][x]*dN_dx_table[i][y])
-                rowY.append(dN_dy_table[i][x]*dN_dy_table[i][y])
-            localX.append(rowX)
-            localY.append(rowY)
+        # for x in range(npc): #uwzgledniamy transpozycje
+        #     rowX=[]
+        #     rowY=[]
+        #     for y in range(npc):
+        #         rowX.append(dN_dx_table[i][x]*dN_dx_table[i][y])
+        #         rowY.append(dN_dy_table[i][x]*dN_dy_table[i][y])
+        #     localX.append(rowX)
+        #     localY.append(rowY)
 
-        HpcX.append(localX)
-        HpcY.append(localY)
+        # HpcX.append(localX)
+        # HpcY.append(localY)
 
-        # Sum H
-        for j in range(4):
-            for k in range(4):
-                H[j][k] += (HpcX[i][j][k] + HpcY[i][j][k]) * weight * detJ *30
+       
+        Hpc = [[[0 for _ in range(4)] for _ in range(4)] for _ in range(npc)]
+        for integrPoint in range(npc):
+             for y in range(4):
+                 for x in range(4):
+                    Hpc[integrPoint][y][x] =30*(HpcX[integrPoint][y][x] + HpcY[integrPoint][y][x]) * jakobian.det
 
-    # Wyświetlanie HpcX i HpcY dla każdego punktu całkowania
-    for idx, (matrixX, matrixY) in enumerate(zip(HpcX, HpcY), start=1):
-        print(f"\nMacierz HpcX dla punktu całkowania pc{idx}:")
-        for row in matrixX:
-            print(" ".join(f"{value:8.4f}" for value in row))
+        for i in range(len(Hpc)):
+            print("Hpc", i+1)
+            for j in range(len(Hpc[i])):
+             print(Hpc[i][j])
+        print()
+    # # Wyświetlanie HpcX i HpcY dla każdego punktu całkowania
+    # for idx, (matrixX, matrixY) in enumerate(zip(HpcX, HpcY), start=1):
+    #     print(f"\nMacierz HpcX dla punktu całkowania pc{idx}:")
+    #     for row in matrixX:
+    #         print(" ".join(f"{value:8.4f}" for value in row))
 
-        print(f"\nMacierz HpcY dla punktu całkowania pc{idx}:")
-        for row in matrixY:
-            print(" ".join(f"{value:8.4f}" for value in row))  
+    #     print(f"\nMacierz HpcY dla punktu całkowania pc{idx}:")
+    #     for row in matrixY:
+    #         print(" ".join(f"{value:8.4f}" for value in row))  
 
-    print(f"\nMacierz HpcY dla punktu całkowania pc{idx}:")
-    for row in matrixY:
-        print(" ".join(f"{value:8.4f}" for value in row))
+    # print(f"\nMacierz HpcY dla punktu całkowania pc{idx}:")
+    # for row in matrixY:
+    #     print(" ".join(f"{value:8.4f}" for value in row))
     print("\nTabela dN/dx:")
     print("pc   dN1/dx   dN2/dx   dN3/dx   dN4/dx")
     for i in range(len(dN_dx_table)):
@@ -228,7 +256,7 @@ grid_przyklad.display_elements()
 
 #---LAB 3 Jakobian---------------------------------------------
 #4 integration points
-npc=4
+npc=9
 weight=1.0 
 elem_univ=ElementUniv(npc)
 
