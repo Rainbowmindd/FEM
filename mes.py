@@ -36,8 +36,8 @@ class ElementUniv: #element uniwersalny,niezalezny od siatki
         self.dN_deta=[] 
         
         #Integration points
-        points = [-0.7745966692414834, 0, 0.7745966692414834]  # Ksi, Eta
-        weights = [5 / 9, 8 / 9, 5 / 9]
+        points = [-0.7745966692414834, 0, 0.7745966692414834]  # Ksi, Eta 
+       # weights = [5 / 9, 8 / 9, 5 / 9]
 
         for ksi in points:
             for eta in points:
@@ -61,16 +61,16 @@ class ElementUniv: #element uniwersalny,niezalezny od siatki
         for i in range(len(self.dN_deta)):
             print(self.dN_deta[i])           
 class Jakobian:
-    def __init__(self, nodeEl, elementUniv, npc):
+    def __init__(self, nodeElement, elementUniv, npc):
         self.J = [[0.0 for _ in range(4)] for _ in range(npc)]
         self.J1 = [[0.0 for _ in range(4)] for _ in range(npc)]
         self.detJ = []
         for l in range(npc):
             for i in range(4):
-                self.J[l][0] += elementUniv.dN_dksi[l][i] * nodeEl[i].x
-                self.J[l][1] += elementUniv.dN_dksi[l][i] * nodeEl[i].y
-                self.J[l][2] += elementUniv.dN_deta[l][i] * nodeEl[i].x
-                self.J[l][3] += elementUniv.dN_deta[l][i] * nodeEl[i].y
+                self.J[l][0] += elementUniv.dN_dksi[l][i] * nodeElement[i].x
+                self.J[l][1] += elementUniv.dN_dksi[l][i] * nodeElement[i].y
+                self.J[l][2] += elementUniv.dN_deta[l][i] * nodeElement[i].x
+                self.J[l][3] += elementUniv.dN_deta[l][i] * nodeElement[i].y
 
             
             epsilon=0.00001
@@ -150,14 +150,14 @@ def calcH(jakobian, elementUniv, k, npc):
             dN_dx[m][x] = j1[0] * elementUniv.dN_dksi[m][x] + j1[1] * elementUniv.dN_deta[m][x]
             dN_dy[m][x] = j1[2] * elementUniv.dN_dksi[m][x] + j1[3] * elementUniv.dN_deta[m][x]
 
-    print("\ndN/dx: ")
-    for i in range(len(dN_dx)):
-        print(dN_dx[i])
-    print("\ndN/dy: ")
-    for i in range(len(dN_dy)):
-        print(dN_dy[i])
+    # print("\ndN/dx: ")
+    # for i in range(len(dN_dx)):
+    #     print(dN_dx[i])
+    # print("\ndN/dy: ")
+    # for i in range(len(dN_dy)):
+    #     print(dN_dy[i])
 
-    # Mnożenie transponownych i zwykłych
+    # Mnożenie transponownych i zwyklych
     HpcX = [[[0 for _ in range(4)] for _ in range(4)] for _ in range(npc)]
     HpcY = [[[0 for _ in range(4)] for _ in range(4)] for _ in range(npc)]
     
@@ -174,11 +174,11 @@ def calcH(jakobian, elementUniv, k, npc):
             for x in range(4):
                 Hpc[integrPoint][y][x] = k * (HpcX[integrPoint][y][x] + HpcY[integrPoint][y][x]) * jakobian.detJ[integrPoint]
 
-    for i in range(len(Hpc)):
-        print("Hpc", i + 1)
-        for j in range(len(Hpc[i])):
-            print(Hpc[i][j])
-        print()
+    # for i in range(len(Hpc)):
+    #     print("Hpc", i + 1)
+    #     for j in range(len(Hpc[i])):
+    #         print(Hpc[i][j])
+    #     print()
 
     # Obliczenie H
     weights = [5/9, 8/9, 5/9, 5/9, 8/9, 5/9, 5/9, 8/9, 5/9]  # Wagi dla 9 punktów całkowania
@@ -190,8 +190,9 @@ def calcH(jakobian, elementUniv, k, npc):
             for y in range(4):
                 H[x][y] += Hpc[i][x][y] * weights[w1] * weights[w2]
 
-    for i in range(len(H)):
-        print(H[i])
+    print("Macierz H:")
+    for row in H:
+        print(row)
 
         
 
@@ -224,30 +225,31 @@ weight=1.0
 elem_univ=ElementUniv(npc)
 
 #Jakobian calc for every element
-for element in grid_przyklad.elements:
-    element_nodes = [grid_przyklad.nodes[id-1] for id in element.ID]  # ID węzłów zaczyna się od 1
-    jakobians = []
+#DLA PRZYKLADOW TESTOWYCH----------------------------------------------------------
+# for element in grid_przyklad.elements:
+#     element_nodes = [grid_przyklad.nodes[id-1] for id in element.ID]  # ID węzłów zaczyna się od 1
+#     jakobians = []
    
-    #Jakobian calc for every point of integration
-    for i in range(npc):
-        jakobian = Jakobian(element_nodes, elem_univ, npc)
-        jakobians.append(jakobian) #add to jakobians[]
+#     #Jakobian calc for every point of integration
+#     for i in range(npc):
+#         jakobian = Jakobian(element_nodes, elem_univ, npc)
+#         jakobians.append(jakobian) #add to jakobians[]
 
 
     
-    #element stores our computed jakobian
-    element.Jakobian=jakobians
-    weights = [(1, 1), (1, 1), (1, 1), (1, 1)]
-    for j, jakobian in enumerate(jakobians):
-        print(f"Jakobian dla elementu: {element.ID}:  \nw punkcie całkowania pc{j+1}: ")
-        for row in jakobian.J:
-            print(row)
-        print("\nInverted Jakobian: ")
-        for row in jakobian.J1:
-            print(row)
-        print(f"detJ: ")
-        print(jakobian.detJ)
-        print("\n")
+#     #element stores our computed jakobian
+#     element.Jakobian=jakobians
+#     weights = [(1, 1), (1, 1), (1, 1), (1, 1)]
+#     for j, jakobian in enumerate(jakobians):
+#         print(f"Jakobian dla elementu: {element.ID}:  \nw punkcie całkowania pc{j+1}: ")
+#         for row in jakobian.J:
+#             print(row)
+#         print("\nInverted Jakobian: ")
+#         for row in jakobian.J1:
+#             print(row)
+#         print(f"detJ: ")
+#         print(jakobian.detJ)
+#         print("\n")
         
         # Wywołanie calculate_H tylko dla przykładu
 
@@ -257,28 +259,38 @@ for element in grid_przyklad.elements:
          
 
 
-file = open('Test1_4_4.txt', 'r')
+#file = open('Test1_4_4.txt', 'r')
+file = open('Test2_4_4_MixGrid.txt', 'r')
+#file=open('Test3_31_31_kwadrat.txt','r')
 lines=file.readlines()
 file.close()
 
 data=GlobalData(lines)
 grid = Grid(data.nN,data.nE)#tworzenie obiektu grid        
 
-load_data_from_file(lines,grid)      
+load_data_from_file(lines,grid) 
+k=25#conduvtivity dla pliku Test1_4_4 txt    
     
 # grid.display_nodes()
 # grid.display_elements()
 
 # Obliczenia jakobianu dla elementów wczytanych z pliku
-# for element in grid.elements:
-#     element_nodes = [grid.nodes[id-1] for id in element.ID]  # ID węzłów zaczyna się od 1
-#     jakobians = []
+# Obliczenia jakobianów dla elementów wczytanych z pliku
+for element in grid.elements:
+    element_nodes = [grid.nodes[id-1] for id in element.ID]  # ID węzłów zaczyna się od 1
+    jakobians = []
     
-#     for i in range(npc):
-#         jakobian = Jakobian()
-#         jakobian.calc_jakobian(elem_univ.dN_dksi[i], elem_univ.dN_deta[i], element_nodes)
-#         jakobians.append(jakobian)
+    # Obliczanie jakobianów dla każdego punktu całkowania
+    for i in range(npc):
+        jakobian = Jakobian(element_nodes, elem_univ, npc)
+        jakobians.append(jakobian) 
+    # Przechowywanie jakobianow w elemencie
+    element.Jakobian = jakobians
     
+  
+    print(f"Obliczanie macierzy H dla elementu {element.ID}")   
+    calcH(jakobian, elem_univ, k, npc)  
+  
 #     # Wyświetlanie wyników dla elementów wczytanych z pliku
 #     for j, jakobian in enumerate(jakobians):
 #         print(f"Jakobian dla elementu: {element.ID}: \nw punkcie całkowania pc{j+1}: ")
@@ -288,8 +300,10 @@ load_data_from_file(lines,grid)
 #         for row in jakobian.J1:
 #             print(row)
 #         print(f"detJ: {jakobian.detJ}\n")
-k=30
-for jakobian in element.Jakobian:  # Loop through each Jacobian
-        calcH(jakobian, elem_univ, k, npc) 
+
+
+#------DLA PRZYKLADOW TESTOWYCH----------------------------------------------
+# for jakobian in element.Jakobian:  # Loop through each Jacobian
+#         calcH(jakobian, elem_univ, k, npc) 
 
 
