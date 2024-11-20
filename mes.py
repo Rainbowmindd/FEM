@@ -89,7 +89,19 @@ class Jakobian:
                 self.J1[l][3] = (1 / detJ_val) * self.J[l][0]
             else:
                 self.J1[l] = [0, 0, 0, 0]
-       
+
+class GlobalH:
+    def __init__(self,size):
+            self.globalH = [[0 for _ in range(size)] for _ in range(size)]   
+
+
+def agregation(self,element,local_H):
+    ids_of_node=element.ID
+    for i in range(4):
+        for j in range(4):
+            global_i=ids_of_node[i]-1 
+            global_j=ids_of_node[j]-1
+            global_H[global_i][global_j] +=local_H[i][j]
 
 
 
@@ -139,8 +151,9 @@ def load_data_from_file(lines,grid):
                 grid.elements.append(Element(nodeID))
                 i+=1
                 
-            #lab 3 :
-            
+
+    
+                     
 #LAB 4 matrix H----------------------------
 def calcH(jakobian, elementUniv, k, npc):
     dN_dx = [[0 for _ in range(4)] for _ in range(npc)]
@@ -193,8 +206,11 @@ def calcH(jakobian, elementUniv, k, npc):
     print("Macierz H:")
     for row in H:
         print(row)
-
         
+    return H
+        
+
+       
 
 
 #Grid dla przykladu z prezentacji do jakobianow---------------------------
@@ -259,8 +275,8 @@ elem_univ=ElementUniv(npc)
          
 
 
-#file = open('Test1_4_4.txt', 'r')
-file = open('Test2_4_4_MixGrid.txt', 'r')
+file = open('Test1_4_4.txt', 'r')
+# file = open('Test2_4_4_MixGrid.txt', 'r')
 #file=open('Test3_31_31_kwadrat.txt','r')
 lines=file.readlines()
 file.close()
@@ -276,6 +292,12 @@ k=25#conduvtivity dla pliku Test1_4_4 txt
 
 # Obliczenia jakobianu dla elementów wczytanych z pliku
 # Obliczenia jakobianów dla elementów wczytanych z pliku
+
+#global H
+
+global_H=[[0 for _ in range(grid.nN)] for _ in range(grid.nN)]
+
+
 for element in grid.elements:
     element_nodes = [grid.nodes[id-1] for id in element.ID]  # ID węzłów zaczyna się od 1
     jakobians = []
@@ -289,7 +311,17 @@ for element in grid.elements:
     
   
     print(f"Obliczanie macierzy H dla elementu {element.ID}")   
-    calcH(jakobian, elem_univ, k, npc)  
+    local_H=calcH(jakobian, elem_univ, k, npc)  
+    agregation(global_H,element,local_H)
+    
+    
+    print("Global H matrix: ")
+    for row in global_H:
+        print(row)
+    
+    
+    
+    
   
 #     # Wyświetlanie wyników dla elementów wczytanych z pliku
 #     for j, jakobian in enumerate(jakobians):
