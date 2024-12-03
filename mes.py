@@ -170,7 +170,7 @@ def calcH(jakobian, elementUniv, k, npc):
     # for i in range(len(dN_dy)):
     #     print(dN_dy[i])
 
-    # Mnożenie transponownych i zwyklych
+    # Mnozenie transponownych i zwyklych
     HpcX = [[[0 for _ in range(4)] for _ in range(4)] for _ in range(npc)]
     HpcY = [[[0 for _ in range(4)] for _ in range(4)] for _ in range(npc)]
     
