@@ -1,9 +1,10 @@
 import math
 
 class Node():
-    def __init__(self,x,y):
+    def __init__(self,x,y,BC=False):
         self.x=x
         self.y=y
+        self.BC=BC #true or false , 1 or 0
         
 class Element():
     def __init__(self,ID,Jakobian=None): #domyslna wartosc dla jakobianu
@@ -11,7 +12,24 @@ class Element():
         self.ID=ID
         #lab3:
         self.Jakobian=Jakobian
+        #Hbc lab:
+        self.H = [[0.0 for _ in range(4)] for _ in range(4)]  
+        self.Hbc = [[0.0 for _ in range(4)] for _ in range(4)]
         
+class GaussIntegration:
+    def __init__(self, npc):
+        if npc == 4:  
+            self.pc = [-0.5773502691896257, 0.5773502691896257]
+            self.w = [1.0, 1.0]
+        elif npc == 9:
+            self.pc = [-0.7745966692414834, 0.0, 0.7745966692414834]
+            self.w = [5/9, 8/9, 5/9]
+        elif npc == 16: 
+            self.pc = [-0.8611363115940526, -0.3399810435848563, 0.3399810435848563, 0.8611363115940526]
+            self.w = [0.3478548451374538, 0.6521451548625461, 0.6521451548625461, 0.3478548451374538]
+        else:
+            raise ValueError("Error")    
+    
 class Grid():
     def __init__(self,nN,nE):
         self.nN=nN #number of nodes
@@ -20,9 +38,9 @@ class Grid():
         self.elements=[]
         
     def display_nodes(self):
-        print("\nWspolrzedne wezlow: \n")
+        print("\nWspolrzedne wezlow i BC: \n")
         for i, node in enumerate(self.nodes):
-            print(f"Wezel {i+1}: ({node.x}, {node.y})")
+            print(f"Wezel {i+1}: ({node.x}, {node.y}, BC: {node.BC})")
             
     def display_elements(self):
         print("\nId wezlow poszczegolnych elementow: \n")
@@ -102,6 +120,7 @@ def agregation(self,element,local_H):
             global_i=ids_of_node[i]-1 
             global_j=ids_of_node[j]-1
             global_H[global_i][global_j] +=local_H[i][j]
+            #global_H[global_i][global_j] = global_H[global_i][global_j] + local_H[i][j] +Hbc[i][j]
 
 
 
@@ -120,6 +139,7 @@ class GlobalData():
             #liczba wezlow i elementow
             self.nN=int(lines[8].split()[2]) 
             self.nE=int(lines[9].split()[2])
+        
     
         
 def load_data_from_file(lines,grid):
@@ -150,9 +170,20 @@ def load_data_from_file(lines,grid):
                 nodeID=list(map(int,temp[1:]))
                 grid.elements.append(Element(nodeID))
                 i+=1
-                
+               
+               #Szukanie *BC
+            while i < len(lines) and lines[i].strip() != "*BC":
+                i += 1
+            i += 1  # Przechodzenie do linii z danymi BC
+            if i >= len(lines):
+                raise ValueError("Brak BC w pliku")
 
-    
+
+            temp = lines[i].strip().split(",")
+            boundary_conditions = list(map(int, temp))
+            for bc in boundary_conditions:
+                grid.nodes[bc - 1].BC = True #ustawienie flagi dla odpowiednich wezlow
+                  
                      
 #LAB 4 matrix H----------------------------
 def calcH(jakobian, elementUniv, k, npc):
@@ -208,7 +239,44 @@ def calcH(jakobian, elementUniv, k, npc):
         print(row)
         
     return H
+
+class Surface:
+    def __init__(self,npc):
+        self.N=[]
+        gaussIntegration=GaussIntegration(npc)
         
+        for ksi in gaussIntegration.pc:
+            self.N.append([(1 - ksi) / 2, (1 + ksi) / 2, 0, 0])  #gorny i dolny bok
+            self.N.append([0, (1 - ksi) / 2, (1 + ksi) / 2, 0])  #prawy bok
+            self.N.append([0, 0, (1 + ksi) / 2, (1 - ksi) / 2])  #gorny bok
+            self.N.append([(1 - ksi) / 2, 0, 0, (1 + ksi) / 2])  #lewy bok
+               
+def calcHbc(surface,element_nodes,alfa,npc):
+    gaussIntegration=GaussIntegration(npc)
+    Hbc=[[0.0 for _ in range(4)] for _ in range(4)]   
+    
+    for side in range(4): #po kazdej scianie
+        for point in range(npc): #po punktach calkowania
+            N=surface.N[side] 
+            x1,y1=element_nodes[side].x,element_nodes[side].y
+            x2, y2 = element_nodes[(side+ 1) % 4].x, element_nodes[(side + 1) % 4].y
+            length = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+            
+            #dlugosc sciany
+            detJ = length / 2.0  # Wyznacznik jakobianu dla 1D
+            for point, weight in enumerate(gaussIntegration.w):
+                N=surface.N[side]
+            
+
+            for i in range(4):
+                for j in range(4):
+                    Hbc[i][j] += alfa * N[i] * N[j] * weight * detJ
+      
+    print("Hbc")              
+    for row in Hbc:
+        print(row)
+
+    return Hbc
 
        
 
@@ -220,10 +288,10 @@ grid_przyklad=Grid(4,1) #4 nodes 1 element
 # grid_przyklad.nodes.append(Node(0.025, 0.025))  
 # grid_przyklad.nodes.append(Node(0, 0.025))
 
-grid_przyklad.nodes.append(Node(0.01, -0.01))          
-grid_przyklad.nodes.append(Node(0.025, 0))      
-grid_przyklad.nodes.append(Node(0.025, 0.025))  
-grid_przyklad.nodes.append(Node(0, 0.025))
+# grid_przyklad.nodes.append(Node(0.01, -0.01))          
+# grid_przyklad.nodes.append(Node(0.025, 0))      
+# grid_przyklad.nodes.append(Node(0.025, 0.025))  
+# grid_przyklad.nodes.append(Node(0, 0.025))
 
 
 grid_przyklad.elements.append(Element([1, 2, 3, 4]))
@@ -286,7 +354,8 @@ grid = Grid(data.nN,data.nE)#tworzenie obiektu grid
 
 load_data_from_file(lines,grid) 
 k=25#conduvtivity dla pliku Test1_4_4 txt    
-    
+alfa=300 #wsp wymiany ciepla
+   
 # grid.display_nodes()
 # grid.display_elements()
 
@@ -297,6 +366,7 @@ k=25#conduvtivity dla pliku Test1_4_4 txt
 
 global_H=[[0 for _ in range(grid.nN)] for _ in range(grid.nN)]
 
+surface = Surface(npc) #powierzchnia
 
 for element in grid.elements:
     element_nodes = [grid.nodes[id-1] for id in element.ID]  # ID węzłów zaczyna się od 1
@@ -311,8 +381,15 @@ for element in grid.elements:
     
   
     print(f"Obliczanie macierzy H dla elementu {element.ID}")   
-    local_H=calcH(jakobian, elem_univ, k, npc)  
+    local_H=calcH(jakobian, elem_univ, k, npc) 
+    Hbc=calcHbc(surface,element_nodes,alfa,npc)
+    
+    local_H+=Hbc
+    
     agregation(global_H,element,local_H)
+    
+    
+    
     
     
     print("Global H matrix: ")
