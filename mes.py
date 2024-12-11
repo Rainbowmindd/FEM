@@ -186,7 +186,7 @@ def load_data_from_file(lines,grid):
                   
                      
 #LAB 4 matrix H----------------------------
-def calcH(jakobian, elementUniv, k, npc):
+def calcH(jakobian, elementUniv,element_nodes,surface, k,alfa, npc):
     dN_dx = [[0 for _ in range(4)] for _ in range(npc)]
     dN_dy = [[0 for _ in range(4)] for _ in range(npc)]
     for m, j1 in enumerate(jakobian.J1):
@@ -234,6 +234,19 @@ def calcH(jakobian, elementUniv, k, npc):
             for y in range(4):
                 H[x][y] += Hpc[i][x][y] * weights[w1] * weights[w2]
 
+    
+    Hbc = calcHbc(surface, element_nodes, npc, alfa)
+    
+    # Dodanie Hbc do lokalnej macierzy H
+    for x in range(4):
+        for y in range(4):
+            H[x][y] += Hbc[x][y]
+
+    print("Macierz H:")
+    for row in H:
+        print(row)
+        
+    return H
     print("Macierz H:")
     for row in H:
         print(row)
@@ -241,42 +254,48 @@ def calcH(jakobian, elementUniv, k, npc):
     return H
 
 class Surface:
-    def __init__(self,npc):
-        self.N=[]
-        gaussIntegration=GaussIntegration(npc)
+    def __init__(self, npc):
+        self.N = []
+        gaussIntegration = GaussIntegration(npc)
         
-        for ksi in gaussIntegration.pc:
-            self.N.append([(1 - ksi) / 2, (1 + ksi) / 2, 0, 0])  #gorny i dolny bok
-            self.N.append([0, (1 - ksi) / 2, (1 + ksi) / 2, 0])  #prawy bok
-            self.N.append([0, 0, (1 + ksi) / 2, (1 - ksi) / 2])  #gorny bok
-            self.N.append([(1 - ksi) / 2, 0, 0, (1 + ksi) / 2])  #lewy bok
+        # Dla 9-punktowej kwadratury Gaussa
+        points = [-0.7745966692414834, 0, 0.7745966692414834]
+        
+        for ksi in points:
+            self.N.append([
+                [(1 - ksi) / 2, (1 + ksi) / 2, 0, 0],  # Górny i dolny bok
+                [0, (1 - ksi) / 2, (1 + ksi) / 2, 0],  # Prawy bok
+                [0, 0, (1 + ksi) / 2, (1 - ksi) / 2],  # Dolny bok
+                [(1 - ksi) / 2, 0, 0, (1 + ksi) / 2]   # Lewy bok
+            ])
                
-def calcHbc(surface,element_nodes,alfa,npc):
-    gaussIntegration=GaussIntegration(npc)
-    Hbc=[[0.0 for _ in range(4)] for _ in range(4)]   
+def calcHbc(surface, element_nodes, npc, alfa):
+    gaussIntegration = GaussIntegration(npc)
+    Hbc = [[0.0 for _ in range(4)] for _ in range(4)]
     
-    for side in range(4): #po kazdej scianie
-        for point in range(npc): #po punktach calkowania
-            N=surface.N[side] 
-            x1,y1=element_nodes[side].x,element_nodes[side].y
-            x2, y2 = element_nodes[(side+ 1) % 4].x, element_nodes[(side + 1) % 4].y
-            length = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-            
-            #dlugosc sciany
-            detJ = length / 2.0  # Wyznacznik jakobianu dla 1D
-            for point, weight in enumerate(gaussIntegration.w):
-                N=surface.N[side]
-            
+    for side in range(4): #for every side
+       
+        if element_nodes[side].BC and element_nodes[(side + 1) % 4].BC:  # sprawdz, czy krawedz ma wezly z warunkiem brzegowym 
+            for point in range(int(math.sqrt(npc))):  # Dla każdego punktu całkowania
+                N = surface.N[point][side] 
+                x1, y1 = element_nodes[side].x, element_nodes[side].y
+                x2, y2 = element_nodes[(side + 1) % 4].x, element_nodes[(side + 1) % 4].y
+                length = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+                
+                # Wyznacznik Jakobianu dla 1D
+                detJ = length / 2.0
+                
+                # Obliczenie Hbc
+                for i in range(4):
+                    for j in range(4):
+                        Hbc[i][j] += alfa * N[i] * N[j] * gaussIntegration.w[point] * detJ
 
-            for i in range(4):
-                for j in range(4):
-                    Hbc[i][j] += alfa * N[i] * N[j] * weight * detJ
-      
-    print("Hbc")              
+    print("Hbc z uwzględnieniem BC:")
     for row in Hbc:
         print(row)
-
+        
     return Hbc
+
 
        
 
@@ -381,10 +400,10 @@ for element in grid.elements:
     
   
     print(f"Obliczanie macierzy H dla elementu {element.ID}")   
-    local_H=calcH(jakobian, elem_univ, k, npc) 
-    Hbc=calcHbc(surface,element_nodes,alfa,npc)
+    local_H = calcH(jakobian, elem_univ, element_nodes, surface, k, alfa, npc) 
+    # Hbc=calcHbc(surface,element_nodes,npc,alfa)
     
-    local_H+=Hbc
+    # local_H+=Hbc
     
     agregation(global_H,element,local_H)
     
@@ -414,5 +433,4 @@ for element in grid.elements:
 #------DLA PRZYKLADOW TESTOWYCH----------------------------------------------
 # for jakobian in element.Jakobian:  # Loop through each Jacobian
 #         calcH(jakobian, elem_univ, k, npc) 
-
 
