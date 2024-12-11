@@ -15,6 +15,24 @@ class Element():
         #Hbc lab:
         self.H = [[0.0 for _ in range(4)] for _ in range(4)]  
         self.Hbc = [[0.0 for _ in range(4)] for _ in range(4)]
+        self.P_local = [0.0 for _ in range(4)]
+        self.P=[0.0 for _ in range(4)] #P forr each element
+    # def calcP(self,surface,alfa,npc):
+    #     gaussIntegration = GaussIntegration(npc)
+        
+    #     for side in range(4):  #for each side
+    #         if self.BC[side]:  # jesli jest warunek brzegowy na tej krawedzi
+    #             for point in range(int(math.sqrt(npc))):  
+    #                 N = surface.N[point][side]
+    #                 length = surface.calculate_length(side)  # Oblicz długość krawędzi
+    #                 detJ = length / 2.0  # detJ w 1D dla każdej krawędzi
+                    
+    #                 # Obliczamy wektor P dla tej krawędzi
+    #                 for i in range(4):
+    #                     self.P_local[i] += alfa * N[i] * gaussIntegration.w[point] * detJ
+                        
+    #     self.P = self.P_local      
+
         
 class GaussIntegration:
     def __init__(self, npc):
@@ -92,7 +110,7 @@ class Jakobian:
 
             
             epsilon=0.00001
-            # Upewnienie się, że elementy są różne od zera
+            # elementy !=0
             self.J[l] = [0 if abs(val) < epsilon else val for val in self.J[l]]
 
             # Obliczanie wyznacznika
@@ -121,6 +139,7 @@ def agregation(self,element,local_H):
             global_j=ids_of_node[j]-1
             global_H[global_i][global_j] +=local_H[i][j]
             #global_H[global_i][global_j] = global_H[global_i][global_j] + local_H[i][j] +Hbc[i][j]
+ 
 
 
 
@@ -247,26 +266,22 @@ def calcH(jakobian, elementUniv,element_nodes,surface, k,alfa, npc):
         print(row)
         
     return H
-    print("Macierz H:")
-    for row in H:
-        print(row)
-        
-    return H
+
 
 class Surface:
     def __init__(self, npc):
         self.N = []
         gaussIntegration = GaussIntegration(npc)
         
-        # Dla 9-punktowej kwadratury Gaussa
+        # dla 9pkt kwadrat. gauss.
         points = [-0.7745966692414834, 0, 0.7745966692414834]
         
-        for ksi in points:
+        for ksi in points:  #dla 1d wzor to N=(1-ksi)/2
             self.N.append([
-                [(1 - ksi) / 2, (1 + ksi) / 2, 0, 0],  # Górny i dolny bok
-                [0, (1 - ksi) / 2, (1 + ksi) / 2, 0],  # Prawy bok
-                [0, 0, (1 + ksi) / 2, (1 - ksi) / 2],  # Dolny bok
-                [(1 - ksi) / 2, 0, 0, (1 + ksi) / 2]   # Lewy bok
+                [(1 - ksi) / 2, (1 + ksi) / 2, 0, 0],  #gorny obrocony-> dolny bok
+                [0, (1 - ksi) / 2, (1 + ksi) / 2, 0],  #odbity lewy-> prawy bok
+                [0, 0, (1 + ksi) / 2, (1 - ksi) / 2],  #dolny obrocony -> gorny bok
+                [(1 - ksi) / 2, 0, 0, (1 + ksi) / 2]   #odbity prawy-> lewy bok
             ])
                
 def calcHbc(surface, element_nodes, npc, alfa):
@@ -276,13 +291,13 @@ def calcHbc(surface, element_nodes, npc, alfa):
     for side in range(4): #for every side
        
         if element_nodes[side].BC and element_nodes[(side + 1) % 4].BC:  # sprawdz, czy krawedz ma wezly z warunkiem brzegowym 
-            for point in range(int(math.sqrt(npc))):  # Dla każdego punktu całkowania
+            for point in range(int(math.sqrt(npc))):  #dla kazdego npc
                 N = surface.N[point][side] 
                 x1, y1 = element_nodes[side].x, element_nodes[side].y
                 x2, y2 = element_nodes[(side + 1) % 4].x, element_nodes[(side + 1) % 4].y
                 length = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
                 
-                # Wyznacznik Jakobianu dla 1D
+                #detJ dla 1D
                 detJ = length / 2.0
                 
                 # Obliczenie Hbc
@@ -290,12 +305,59 @@ def calcHbc(surface, element_nodes, npc, alfa):
                     for j in range(4):
                         Hbc[i][j] += alfa * N[i] * N[j] * gaussIntegration.w[point] * detJ
 
+                # for i in range(4): #temp=1200
+                #     P_local[i]+= alfa * N[i] * gaussIntegration.w[point] * detJ *1200
     print("Hbc z uwzględnieniem BC:")
     for row in Hbc:
         print(row)
         
     return Hbc
 
+def calcP_Local(surface, element_nodes, npc, alfa):
+    gaussIntegration = GaussIntegration(npc)
+    
+    P_local = [0.0 for _ in range(4)]
+    for side in range(4):  # for every side
+        if element_nodes[side].BC and element_nodes[(side + 1) % 4].BC:  # Check if the edge has boundary condition nodes
+            for point in range(int(math.sqrt(npc))):  # For each integration point
+                N = surface.N[point][side]
+                x1, y1 = element_nodes[side].x, element_nodes[side].y
+                x2, y2 = element_nodes[(side + 1) % 4].x, element_nodes[(side + 1) % 4].y
+                length = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+                
+                # detJ for 1D
+                detJ = length / 2.0
+                
+                # Calculate P_local
+                for i in range(4):
+                    P_local[i] += alfa * N[i] * gaussIntegration.w[point] * detJ * 1200
+
+    print('P_local:')
+    for row in P_local:
+        print(row)
+
+    return P_local
+
+
+def calc_global_P(grid, surface, npc, alfa):
+    global_P = [0.0 for _ in range(len(grid.nodes))]  
+
+   
+    for element in grid.elements:
+        element_nodes = [grid.nodes[id-1] for id in element.ID]  
+        
+        P_local = [0.0 for _ in range(4)]
+        P_local = calcP_Local(surface, element_nodes, npc, alfa)
+       
+        for i in range(4):
+            global_P[element.ID[i] - 1] += P_local[i]  
+            
+            
+    print("Globalny wektor P:")
+    for row in global_P:
+        print(row)
+
+    return global_P
 
        
 
@@ -384,6 +446,9 @@ alfa=300 #wsp wymiany ciepla
 #global H
 
 global_H=[[0 for _ in range(grid.nN)] for _ in range(grid.nN)]
+P_local = [0.0 for _ in range(4)]  
+
+
 
 surface = Surface(npc) #powierzchnia
 
@@ -403,8 +468,10 @@ for element in grid.elements:
     local_H = calcH(jakobian, elem_univ, element_nodes, surface, k, alfa, npc) 
     # Hbc=calcHbc(surface,element_nodes,npc,alfa)
     
+    #P_local=calcP_Local(surface,element_nodes,npc,alfa)
     # local_H+=Hbc
-    
+    # global_P=calc_global_P(grid,surface,npc,alfa)
+    P_global=calc_global_P(grid,surface,npc,alfa)
     agregation(global_H,element,local_H)
     
     
