@@ -1,4 +1,5 @@
 import math
+import numpy as np
 
 class Node():
     def __init__(self,x,y,BC=False):
@@ -359,7 +360,26 @@ def calc_global_P(grid, surface, npc, alfa):
 
     return global_P
 
-       
+def solve_temperature(global_H, global_P):
+    """
+   Uklad rownan H * t + P = 0
+    """
+    global_H = np.array(global_H)
+    global_P = np.array(global_P)
+    
+    # Zmiana znaku w wektorze P
+   # global_P = -global_P
+    
+    try:
+        #rozw ukladu rownan
+        temperature = np.linalg.solve(global_H, global_P)
+        print('\nRozwiazanie ukladu rownan:')
+        print(temperature)
+    except np.linalg.LinAlgError as e:
+        print("error:", e)
+        return None
+    
+    return temperature       
 
 
 #Grid dla przykladu z prezentacji do jakobianow---------------------------
@@ -474,15 +494,11 @@ for element in grid.elements:
     P_global=calc_global_P(grid,surface,npc,alfa)
     agregation(global_H,element,local_H)
     
-    
-    
-    
-    
     print("Global H matrix: ")
     for row in global_H:
         print(row)
     
-    
+    solve_temperature(global_H,P_global)
     
     
   
