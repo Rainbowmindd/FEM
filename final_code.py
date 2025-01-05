@@ -1,6 +1,7 @@
 import math
 import numpy as np
 
+
 class Node():
     def __init__(self,x,y,BC=False):
         self.x=x
@@ -21,6 +22,12 @@ class Element():
         self.P=[0.0 for _ in range(4)] #P forr each element
         self.C_local=[[0.0 for _ in range(4)] for _ in range(4)]
         self.C=[[0.0 for _ in range(4)] for _ in range(4)]
+        
+class SOE():
+    def __init__(self,Nn):
+        self.H_global=[[0.0 for _ in range(4)] for _ in range(4)]
+        self.C_global= [[0.0 for _ in range(4)] for _ in range(4)]
+        self.P_global=[[0.0 for _ in range(4)] for _ in range(4)]
     # def calcP(self,surface,alfa,npc):
     #     gaussIntegration = GaussIntegration(npc)
         
@@ -93,12 +100,12 @@ class ElementUniv: #element uniwersalny,niezalezny od siatki
                                      0.25 * (1 - ksi)])
                 
         #Wartosci funkcji ksztaltu w punktach calkowania
-        N1=0.25* (1-ksi)*(1-eta)
-        N2=0.25* (1+ksi)*(1-eta)
-        N3=0.25* (1+ksi)*(1+eta)
-        N4=0.25* (1-ksi)*(1+eta)
+                N1=0.25* (1-ksi)*(1-eta)
+                N2=0.25* (1+ksi)*(1-eta)
+                N3=0.25* (1+ksi)*(1+eta)
+                N4=0.25* (1-ksi)*(1+eta)
         
-        self.N_wart_funkcji.append([N1,N2,N3,N4])
+                self.N_wart_funkcji.append([N1,N2,N3,N4])
         
 
         self.printTabs()
@@ -143,9 +150,9 @@ class Jakobian:
             else:
                 self.J1[l] = [0, 0, 0, 0]
 
-class GlobalH:
-    def __init__(self,size):
-            self.globalH = [[0 for _ in range(size)] for _ in range(size)]   
+# class GlobalH:
+#     def __init__(self,size):
+#             self.globalH = [[0 for _ in range(size)] for _ in range(size)]   
 
 
 def agregation(self,element,local_H):
@@ -389,6 +396,36 @@ def calc_global_P(grid, surface, npc, alfa):
 
     return global_P
 
+def calcC(element_nodes,jakobian,npc,c,ro,elementUniv):
+    C_matrix=[[0.0 for _ in range(4)] for _ in range(4)]
+      # Pobieramy wagi z GaussIntegration
+    gaussIntegration = GaussIntegration(npc)
+    weights = gaussIntegration.w  # Pobieramy wagi
+    
+    
+    # Obliczanie elementu macierzy C
+    for i in range(npc):
+        w1=i%3
+        w2=i//3
+        
+        for x in range(4):
+            for y in range(4):
+                # Używamy wartości funkcji kształtu z elementUniv.N_wart_funkcji
+                C_matrix[x][y] += (elementUniv.N_wart_funkcji[i][x] * 
+                                 elementUniv.N_wart_funkcji[i][y] * 
+                                 c * ro * jakobian.detJ[i] *
+                                 weights[w1] * weights[w2])
+    
+    print('Macierz C (pojemnościowa):')
+    for row in C_matrix:
+        print(row)
+    
+    return C_matrix
+    
+    
+    
+    
+    
 def solve_temperature(global_H, global_P):
     """
    Uklad rownan H * t + P = 0
@@ -528,6 +565,8 @@ for element in grid.elements:
         print(row)
     
     solve_temperature(global_H,P_global)
+    
+    C_local = calcC(element_nodes, jakobian, npc, data.SpecificHeat, data.Density, elem_univ)
     
     
   
