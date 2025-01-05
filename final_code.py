@@ -78,15 +78,14 @@ class Grid():
  
 class ElementUniv: #element uniwersalny,niezalezny od siatki
     def __init__(self,npc):
-        #dN_dksi and dN_deta (pochodne funkcji ksztaltu)
-        self.dN_dksi=[] #npc x 4(nodes)
+        self.dN_dksi=[] 
         self.dN_deta=[] 
-        self.N_wart_funkcji=[] 
+        self.N_wart_funkcji=[]
         
-        #Integration points
-        points = [-0.7745966692414834, 0, 0.7745966692414834]  # Ksi, Eta 
-       # weights = [5 / 9, 8 / 9, 5 / 9]
-
+        gaussIntegration = GaussIntegration(npc)
+        points = gaussIntegration.pc # Pobieramy punkty całkowania z klasy GaussIntegration
+            
+        # Obliczamy wartości dla każdej kombinacji punktów całkowania
         for ksi in points:
             for eta in points:
                 self.dN_dksi.append([-0.25 * (1 - eta),
@@ -99,14 +98,13 @@ class ElementUniv: #element uniwersalny,niezalezny od siatki
                                      0.25 * (1 + ksi),
                                      0.25 * (1 - ksi)])
                 
-        #Wartosci funkcji ksztaltu w punktach calkowania
-                N1=0.25* (1-ksi)*(1-eta)
-                N2=0.25* (1+ksi)*(1-eta)
-                N3=0.25* (1+ksi)*(1+eta)
-                N4=0.25* (1-ksi)*(1+eta)
-        
-                self.N_wart_funkcji.append([N1,N2,N3,N4])
-        
+                # Calculate shape functions for each integration point
+                N1 = 0.25 * (1 - ksi) * (1 - eta)
+                N2 = 0.25 * (1 + ksi) * (1 - eta)
+                N3 = 0.25 * (1 + ksi) * (1 + eta)
+                N4 = 0.25 * (1 - ksi) * (1 + eta)
+                
+                self.N_wart_funkcji.append([N1, N2, N3, N4])
 
         self.printTabs()
         
@@ -396,21 +394,20 @@ def calc_global_P(grid, surface, npc, alfa):
 
     return global_P
 
-def calcC(element_nodes,jakobian,npc,c,ro,elementUniv):
-    C_matrix=[[0.0 for _ in range(4)] for _ in range(4)]
-      # Pobieramy wagi z GaussIntegration
+def calcC(element_nodes, jakobian, npc, c, ro, elementUniv):
+    C_matrix = [[0.0 for _ in range(4)] for _ in range(4)]
+    
+    # Get weights for Gaussian integration
     gaussIntegration = GaussIntegration(npc)
-    weights = gaussIntegration.w  # Pobieramy wagi
+    weights = gaussIntegration.w
+    n = int(math.sqrt(npc))  # liczba punktów w jednym kierunku (2 dla npc=4, 3 dla npc=9, 4 dla npc=16)
     
-    
-    # Obliczanie elementu macierzy C
     for i in range(npc):
-        w1=i%3
-        w2=i//3
+        w1 = i % n  # index dla wag ksi
+        w2 = i // n  # index dla wag eta
         
         for x in range(4):
             for y in range(4):
-                # Używamy wartości funkcji kształtu z elementUniv.N_wart_funkcji
                 C_matrix[x][y] += (elementUniv.N_wart_funkcji[i][x] * 
                                  elementUniv.N_wart_funkcji[i][y] * 
                                  c * ro * jakobian.detJ[i] *
