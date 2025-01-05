@@ -308,8 +308,15 @@ class Surface:
         self.N = []
         gaussIntegration = GaussIntegration(npc)
         
-        # dla 9pkt kwadrat. gauss.
-        points = [-0.7745966692414834, 0, 0.7745966692414834]
+        # Get points based on npc
+        if npc == 4:
+            points = [-0.5773502691896257, 0.5773502691896257]
+        elif npc == 9:
+            points = [-0.7745966692414834, 0, 0.7745966692414834]
+        elif npc == 16:
+            points = [-0.8611363115940526, -0.3399810435848563, 0.3399810435848563, 0.8611363115940526]
+        else:
+            raise ValueError("Unsupported number of integration points")
         
         for ksi in points:  #dla 1d wzor to N=(1-ksi)/2
             self.N.append([
@@ -322,11 +329,13 @@ class Surface:
 def calcHbc(surface, element_nodes, npc, alfa):
     gaussIntegration = GaussIntegration(npc)
     Hbc = [[0.0 for _ in range(4)] for _ in range(4)]
-    
+
+    n=int(math.sqrt(npc)) 
+       
     for side in range(4): #for every side
        
         if element_nodes[side].BC and element_nodes[(side + 1) % 4].BC:  # sprawdz, czy krawedz ma wezly z warunkiem brzegowym 
-            for point in range(int(math.sqrt(npc))):  #dla kazdego npc
+            for point in range(n):  #dla kazdego npc
                 N = surface.N[point][side] 
                 x1, y1 = element_nodes[side].x, element_nodes[side].y
                 x2, y2 = element_nodes[(side + 1) % 4].x, element_nodes[(side + 1) % 4].y
@@ -338,7 +347,8 @@ def calcHbc(surface, element_nodes, npc, alfa):
                 # Obliczenie Hbc
                 for i in range(4):
                     for j in range(4):
-                        Hbc[i][j] += alfa * N[i] * N[j] * gaussIntegration.w[point] * detJ
+                        weight=gaussIntegration.w[point]
+                        Hbc[i][j] += alfa * N[i] * N[j] * weight * detJ
 
                 # for i in range(4): #temp=1200
                 #     P_local[i]+= alfa * N[i] * gaussIntegration.w[point] * detJ *1200
@@ -467,8 +477,9 @@ grid_przyklad.display_elements()
 
 
 #---LAB 3 Jakobian---------------------------------------------
-
-npc=9
+#npc=4
+npc=16
+#npc=9
 weight=1.0 
 elem_univ=ElementUniv(npc)
 
