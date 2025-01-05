@@ -28,6 +28,7 @@ class SOE():
         self.H_global=[[0.0 for _ in range(4)] for _ in range(4)]
         self.C_global= [[0.0 for _ in range(4)] for _ in range(4)]
         self.P_global=[[0.0 for _ in range(4)] for _ in range(4)]
+
     # def calcP(self,surface,alfa,npc):
     #     gaussIntegration = GaussIntegration(npc)
         
@@ -153,7 +154,7 @@ class Jakobian:
 #             self.globalH = [[0 for _ in range(size)] for _ in range(size)]   
 
 
-def agregation(self,element,local_H):
+def agregation(self,element,local_H,C_local):
     ids_of_node=element.ID
     for i in range(4):
         for j in range(4):
@@ -161,7 +162,11 @@ def agregation(self,element,local_H):
             global_j=ids_of_node[j]-1
             global_H[global_i][global_j] +=local_H[i][j]
             #global_H[global_i][global_j] = global_H[global_i][global_j] + local_H[i][j] +Hbc[i][j]
- 
+    for i in range(4):
+        for j in range(4):
+            global_i=ids_of_node[i]-1 
+            global_j=ids_of_node[j]-1
+            global_C[global_i][global_j]+=C_local[i][j]
 
 
 
@@ -478,8 +483,8 @@ grid_przyklad.display_elements()
 
 #---LAB 3 Jakobian---------------------------------------------
 #npc=4
-npc=16
-#npc=9
+#npc=16
+npc=9
 weight=1.0 
 elem_univ=ElementUniv(npc)
 
@@ -540,7 +545,8 @@ alfa=300 #wsp wymiany ciepla
 #global H
 
 global_H=[[0 for _ in range(grid.nN)] for _ in range(grid.nN)]
-P_local = [0.0 for _ in range(4)]  
+P_local = [0.0 for _ in range(4)] 
+global_C=[[0 for _ in range(grid.nN)] for _ in range(grid.nN)] 
 
 
 
@@ -566,15 +572,20 @@ for element in grid.elements:
     # local_H+=Hbc
     # global_P=calc_global_P(grid,surface,npc,alfa)
     P_global=calc_global_P(grid,surface,npc,alfa)
-    agregation(global_H,element,local_H)
+    C_local = calcC(element_nodes, jakobian, npc, data.SpecificHeat, data.Density, elem_univ)
+    agregation(global_H,element,local_H,C_local)
     
     print("Global H matrix: ")
     for row in global_H:
         print(row)
     
+    print("Global C")
+    for row in global_C:
+        print(row)
+        
     solve_temperature(global_H,P_global)
     
-    C_local = calcC(element_nodes, jakobian, npc, data.SpecificHeat, data.Density, elem_univ)
+    
     
     
   
