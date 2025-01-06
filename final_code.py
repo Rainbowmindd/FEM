@@ -25,9 +25,9 @@ class Element():
         
 class SOE():
     def __init__(self,Nn):
-        self.H_global=[[0.0 for _ in range(4)] for _ in range(4)]
-        self.C_global= [[0.0 for _ in range(4)] for _ in range(4)]
-        self.P_global=[[0.0 for _ in range(4)] for _ in range(4)]
+        self.H_global=[[0.0 for _ in range(Nn)] for _ in range(Nn)]
+        self.C_global= [[0.0 for _ in range(Nn)] for _ in range(Nn)]
+        self.P_global=[0.0 for _ in range(Nn)]
 
     # def calcP(self,surface,alfa,npc):
     #     gaussIntegration = GaussIntegration(npc)
@@ -149,11 +149,6 @@ class Jakobian:
             else:
                 self.J1[l] = [0, 0, 0, 0]
 
-# class GlobalH:
-#     def __init__(self,size):
-#             self.globalH = [[0 for _ in range(size)] for _ in range(size)]   
-
-
 def agregation(self,element,local_H,C_local):
     ids_of_node=element.ID
     for i in range(4):
@@ -243,7 +238,6 @@ def load_data_from_file(lines,grid):
                     node.temp = initial_temp
                   
                      
-#LAB 4 matrix H----------------------------
 def calcH(jakobian, elementUniv,element_nodes,surface, k,alfa, npc):
     dN_dx = [[0 for _ in range(4)] for _ in range(npc)]
     dN_dy = [[0 for _ in range(4)] for _ in range(npc)]
@@ -300,9 +294,9 @@ def calcH(jakobian, elementUniv,element_nodes,surface, k,alfa, npc):
         for y in range(4):
             H[x][y] += Hbc[x][y]
 
-    print("Macierz H:")
-    for row in H:
-        print(row)
+    # print("Macierz H:")
+    # for row in H:
+    #     print(row)
         
     return H
 
@@ -357,9 +351,9 @@ def calcHbc(surface, element_nodes, npc, alfa):
 
                 # for i in range(4): #temp=1200
                 #     P_local[i]+= alfa * N[i] * gaussIntegration.w[point] * detJ *1200
-    print("Hbc z uwzględnieniem BC:")
-    for row in Hbc:
-        print(row)
+    # print("Hbc z uwzględnieniem BC:")
+    # for row in Hbc:
+    #     print(row)
         
     return Hbc
 
@@ -382,9 +376,9 @@ def calcP_Local(surface, element_nodes, npc, alfa):
                 for i in range(4):
                     P_local[i] += alfa * N[i] * gaussIntegration.w[point] * detJ * 1200
 
-    print('P_local:')
-    for row in P_local:
-        print(row)
+    # print('P_local:')
+    # for row in P_local:
+    #     print(row)
 
     return P_local
 
@@ -403,9 +397,9 @@ def calc_global_P(grid, surface, npc, alfa):
             global_P[element.ID[i] - 1] += P_local[i]  
             
             
-    print("Globalny wektor P:")
-    for row in global_P:
-        print(row)
+    # print("Globalny wektor P:")
+    # for row in global_P:
+    #     print(row)
 
     return global_P
 
@@ -428,9 +422,9 @@ def calcC(element_nodes, jakobian, npc, c, ro, elementUniv):
                                  c * ro * jakobian.detJ[i] *
                                  weights[w1] * weights[w2])
     
-    print('Macierz C (pojemnościowa):')
-    for row in C_matrix:
-        print(row)
+    # print('Macierz C (pojemnościowa):')
+    # for row in C_matrix:
+    #     print(row)
     
     return C_matrix
     
@@ -458,6 +452,101 @@ def solve_temperature(global_H, global_P):
         return None
     
     return temperature       
+
+def time_solution(grid,data,surface,elem_univ,npc):
+    
+    soe=SOE(data.nN)
+    
+    #temperatures 
+    t_0=np.full(data.nN,data.InitialTemp)
+    t_1=np.zeros(data.nN)
+    
+    
+    results=[]
+    
+    #time step loop
+    t=0
+    while t<data.SimulationTime:
+        
+        soe.H_global=[[0.0 for _ in range(data.nN)] for _ in range(data.nN)]
+        soe.C_global=[[0.0 for _ in range(data.nN)] for _ in range(data.nN)]
+        soe.P_global=[0.0 for _ in range(data.nN)]
+      
+        for element in grid.elements:
+            element_nodes=[grid.nodes[id-1] for id in element.ID]
+            
+            jakobian=Jakobian(element_nodes,elem_univ,npc)
+            H_local = calcH(jakobian, elem_univ, element_nodes, surface, 
+                          data.Conductivity, data.Alfa, npc)
+            C_local = calcC(element_nodes, jakobian, npc, 
+                          data.SpecificHeat, data.Density, elem_univ)
+            P_local = calcP_Local(surface, element_nodes, npc, data.Alfa)
+            
+            
+            #aggregation
+            for i in range(4):
+                for j in range(4):
+                    global_i = element.ID[i] - 1
+                    global_j = element.ID[j] - 1
+                    soe.H_global[global_i][global_j] += H_local[i][j]
+                    soe.C_global[global_i][global_j] += C_local[i][j]
+                soe.P_global[element.ID[i] - 1] += P_local[i]
+        #to use numpy
+        H=np.array(soe.H_global)
+        C=np.array(soe.C_global)
+        P=np.array(soe.P_global)
+        
+        #final: [H + C/dt]t1 = P + C/dt * t0
+        dt=data.SimulationStepTime
+        C_dt=C/dt
+        A=H+C_dt
+        b=P+np.dot(C_dt,t_0)
+        
+        #solve:
+        try:
+            t_1=np.linalg.solve(A,b)
+            print(f"\nTemperatures at time {t + dt}:")
+            print(t_1)
+            results.append((np.min(t_1),np.max(t_1)))
+        except np.linalg.LinAlgError as e:
+            print("error")
+            break
+        
+        t_0=t_1.copy()
+        t+=dt
+        
+    print("Wyniki w czasie max oraz min", end=" ")
+    for min_temp, max_temp in results:
+        print(f"{min_temp} {max_temp}", end=" ")
+    print()  # New line at the end
+    return t_1
+
+def run_simulation(filename):
+    # Read input file
+    with open(filename, 'r') as file:
+        lines = file.readlines()
+    
+    # Initialize data structures
+    data = GlobalData(lines)
+    grid = Grid(data.nN, data.nE)
+    load_data_from_file(lines, grid)
+    
+    # Create universal element and surface
+    npc = 9  # or 4 or 16 depending on desired accuracy
+    elem_univ = ElementUniv(npc)
+    surface = Surface(npc)
+    
+    # Run simulation
+    final_temperatures = time_solution(grid, data, surface, elem_univ, npc)
+    
+    # print("\nFinal temperatures:")
+    # print(final_temperatures)
+    
+    return final_temperatures
+        
+    
+
+
 
 
 #Grid dla przykladu z prezentacji do jakobianow---------------------------
@@ -524,6 +613,7 @@ elem_univ=ElementUniv(npc)
 
 
 file = open('Test1_4_4.txt', 'r')
+
 #file = open('Test2_4_4_MixGrid.txt', 'r')
 #file=open('Test3_31_31_kwadrat.txt','r')
 lines=file.readlines()
@@ -552,6 +642,11 @@ global_C=[[0 for _ in range(grid.nN)] for _ in range(grid.nN)]
 
 surface = Surface(npc) #powierzchnia
 
+# final_temps = run_simulation('Test1_4_4.txt')
+# final_temps = run_simulation('Test2_4_4_MixGrid.txt')
+final_temps = run_simulation('Test3_31_31_kwadrat.txt')
+
+
 for element in grid.elements:
     element_nodes = [grid.nodes[id-1] for id in element.ID]  # ID węzłów zaczyna się od 1
     jakobians = []
@@ -575,13 +670,14 @@ for element in grid.elements:
     C_local = calcC(element_nodes, jakobian, npc, data.SpecificHeat, data.Density, elem_univ)
     agregation(global_H,element,local_H,C_local)
     
-    print("Global H matrix: ")
-    for row in global_H:
-        print(row)
     
-    print("Global C")
-    for row in global_C:
-        print(row)
+    # print("Global H matrix: ")
+    # for row in global_H:
+    #     print(row)
+    
+    # print("Global C")
+    # for row in global_C:
+    #     print(row)
         
     solve_temperature(global_H,P_global)
     
