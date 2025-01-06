@@ -28,24 +28,7 @@ class SOE():
         self.H_global=[[0.0 for _ in range(Nn)] for _ in range(Nn)]
         self.C_global= [[0.0 for _ in range(Nn)] for _ in range(Nn)]
         self.P_global=[0.0 for _ in range(Nn)]
-
-    # def calcP(self,surface,alfa,npc):
-    #     gaussIntegration = GaussIntegration(npc)
-        
-    #     for side in range(4):  #for each side
-    #         if self.BC[side]:  # jesli jest warunek brzegowy na tej krawedzi
-    #             for point in range(int(math.sqrt(npc))):  
-    #                 N = surface.N[point][side]
-    #                 length = surface.calculate_length(side)  # Oblicz długość krawędzi
-    #                 detJ = length / 2.0  # detJ w 1D dla każdej krawędzi
-                    
-    #                 # Obliczamy wektor P dla tej krawędzi
-    #                 for i in range(4):
-    #                     self.P_local[i] += alfa * N[i] * gaussIntegration.w[point] * detJ
-                        
-    #     self.P = self.P_local      
-
-        
+       
 class GaussIntegration:
     def __init__(self, npc):
         if npc == 4:  
@@ -156,7 +139,6 @@ def agregation(self,element,local_H,C_local):
             global_i=ids_of_node[i]-1 
             global_j=ids_of_node[j]-1
             global_H[global_i][global_j] +=local_H[i][j]
-            #global_H[global_i][global_j] = global_H[global_i][global_j] + local_H[i][j] +Hbc[i][j]
     for i in range(4):
         for j in range(4):
             global_i=ids_of_node[i]-1 
@@ -300,7 +282,6 @@ def calcH(jakobian, elementUniv,element_nodes,surface, k,alfa, npc):
         
     return H
 
-# def calcC()
 
 class Surface:
     def __init__(self, npc):
@@ -406,10 +387,9 @@ def calc_global_P(grid, surface, npc, alfa):
 def calcC(element_nodes, jakobian, npc, c, ro, elementUniv):
     C_matrix = [[0.0 for _ in range(4)] for _ in range(4)]
     
-    # Get weights for Gaussian integration
     gaussIntegration = GaussIntegration(npc)
     weights = gaussIntegration.w
-    n = int(math.sqrt(npc))  # liczba punktów w jednym kierunku (2 dla npc=4, 3 dla npc=9, 4 dla npc=16)
+    n = int(math.sqrt(npc)) 
     
     for i in range(npc):
         w1 = i % n  # index dla wag ksi
@@ -427,11 +407,7 @@ def calcC(element_nodes, jakobian, npc, c, ro, elementUniv):
     #     print(row)
     
     return C_matrix
-    
-    
-    
-    
-    
+       
 def solve_temperature(global_H, global_P):
     """
    Uklad rownan H * t + P = 0
@@ -491,7 +467,8 @@ def time_solution(grid,data,surface,elem_univ,npc):
                     soe.H_global[global_i][global_j] += H_local[i][j]
                     soe.C_global[global_i][global_j] += C_local[i][j]
                 soe.P_global[element.ID[i] - 1] += P_local[i]
-        #to use numpy
+        
+        #list->array
         H=np.array(soe.H_global)
         C=np.array(soe.C_global)
         P=np.array(soe.P_global)
@@ -518,98 +495,38 @@ def time_solution(grid,data,surface,elem_univ,npc):
     print("Wyniki w czasie max oraz min", end=" ")
     for min_temp, max_temp in results:
         print(f"{min_temp} {max_temp}", end=" ")
-    print()  # New line at the end
+    print() 
     return t_1
 
 def run_simulation(filename):
-    # Read input file
+   
     with open(filename, 'r') as file:
         lines = file.readlines()
     
-    # Initialize data structures
     data = GlobalData(lines)
     grid = Grid(data.nN, data.nE)
     load_data_from_file(lines, grid)
     
-    # Create universal element and surface
-    npc = 9  # or 4 or 16 depending on desired accuracy
+    #npc=4
+    #npc=16
+    npc = 9 
     elem_univ = ElementUniv(npc)
     surface = Surface(npc)
     
-    # Run simulation
+ 
     final_temperatures = time_solution(grid, data, surface, elem_univ, npc)
     
     # print("\nFinal temperatures:")
     # print(final_temperatures)
     
     return final_temperatures
-        
-    
-
-
-
-
-#Grid dla przykladu z prezentacji do jakobianow---------------------------
-grid_przyklad=Grid(4,1) #4 nodes 1 element 
-# grid_przyklad.nodes.append(Node(0, 0))          
-# grid_przyklad.nodes.append(Node(0.025, 0))      
-# grid_przyklad.nodes.append(Node(0.025, 0.025))  
-# grid_przyklad.nodes.append(Node(0, 0.025))
-
-# grid_przyklad.nodes.append(Node(0.01, -0.01))          
-# grid_przyklad.nodes.append(Node(0.025, 0))      
-# grid_przyklad.nodes.append(Node(0.025, 0.025))  
-# grid_przyklad.nodes.append(Node(0, 0.025))
-
-
-grid_przyklad.elements.append(Element([1, 2, 3, 4]))
-
-grid_przyklad.display_nodes()
-grid_przyklad.display_elements()
-           
-
-
-
-#---LAB 3 Jakobian---------------------------------------------
+          
+          
 #npc=4
 #npc=16
 npc=9
 weight=1.0 
 elem_univ=ElementUniv(npc)
-
-#Jakobian calc for every element
-#DLA PRZYKLADOW TESTOWYCH----------------------------------------------------------
-# for element in grid_przyklad.elements:
-#     element_nodes = [grid_przyklad.nodes[id-1] for id in element.ID]  # ID węzłów zaczyna się od 1
-#     jakobians = []
-   
-#     #Jakobian calc for every point of integration
-#     for i in range(npc):
-#         jakobian = Jakobian(element_nodes, elem_univ, npc)
-#         jakobians.append(jakobian) #add to jakobians[]
-
-
-    
-#     #element stores our computed jakobian
-#     element.Jakobian=jakobians
-#     weights = [(1, 1), (1, 1), (1, 1), (1, 1)]
-#     for j, jakobian in enumerate(jakobians):
-#         print(f"Jakobian dla elementu: {element.ID}:  \nw punkcie całkowania pc{j+1}: ")
-#         for row in jakobian.J:
-#             print(row)
-#         print("\nInverted Jakobian: ")
-#         for row in jakobian.J1:
-#             print(row)
-#         print(f"detJ: ")
-#         print(jakobian.detJ)
-#         print("\n")
-        
-        # Wywołanie calculate_H tylko dla przykładu
-
-            
-            
-
-         
 
 
 file = open('Test1_4_4.txt', 'r')
@@ -629,46 +546,40 @@ alfa=300 #wsp wymiany ciepla
 # grid.display_nodes()
 # grid.display_elements()
 
-# Obliczenia jakobianu dla elementów wczytanych z pliku
-# Obliczenia jakobianów dla elementów wczytanych z pliku
-
-#global H
-
 global_H=[[0 for _ in range(grid.nN)] for _ in range(grid.nN)]
 P_local = [0.0 for _ in range(4)] 
 global_C=[[0 for _ in range(grid.nN)] for _ in range(grid.nN)] 
 
-
-
 surface = Surface(npc) #powierzchnia
 
+#---Pliki----------------------------------
 # final_temps = run_simulation('Test1_4_4.txt')
 # final_temps = run_simulation('Test2_4_4_MixGrid.txt')
 final_temps = run_simulation('Test3_31_31_kwadrat.txt')
 
 
-for element in grid.elements:
-    element_nodes = [grid.nodes[id-1] for id in element.ID]  # ID węzłów zaczyna się od 1
-    jakobians = []
+# for element in grid.elements:
+#     element_nodes = [grid.nodes[id-1] for id in element.ID]  # ID węzłów zaczyna się od 1
+#     jakobians = []
     
-    # Obliczanie jakobianów dla każdego punktu całkowania
-    for i in range(npc):
-        jakobian = Jakobian(element_nodes, elem_univ, npc)
-        jakobians.append(jakobian) 
-    # Przechowywanie jakobianow w elemencie
-    element.Jakobian = jakobians
+#     # Obliczanie jakobianów dla każdego punktu całkowania
+#     for i in range(npc):
+#         jakobian = Jakobian(element_nodes, elem_univ, npc)
+#         jakobians.append(jakobian) 
+#     # Przechowywanie jakobianow w elemencie
+#     element.Jakobian = jakobians
     
   
-    print(f"Obliczanie macierzy H dla elementu {element.ID}")   
-    local_H = calcH(jakobian, elem_univ, element_nodes, surface, k, alfa, npc) 
-    # Hbc=calcHbc(surface,element_nodes,npc,alfa)
+#     print(f"Obliczanie macierzy H dla elementu {element.ID}")   
+#     local_H = calcH(jakobian, elem_univ, element_nodes, surface, k, alfa, npc) 
+#     # Hbc=calcHbc(surface,element_nodes,npc,alfa)
     
-    #P_local=calcP_Local(surface,element_nodes,npc,alfa)
-    # local_H+=Hbc
-    # global_P=calc_global_P(grid,surface,npc,alfa)
-    P_global=calc_global_P(grid,surface,npc,alfa)
-    C_local = calcC(element_nodes, jakobian, npc, data.SpecificHeat, data.Density, elem_univ)
-    agregation(global_H,element,local_H,C_local)
+#     #P_local=calcP_Local(surface,element_nodes,npc,alfa)
+#     # local_H+=Hbc
+#     # global_P=calc_global_P(grid,surface,npc,alfa)
+#     P_global=calc_global_P(grid,surface,npc,alfa)
+#     C_local = calcC(element_nodes, jakobian, npc, data.SpecificHeat, data.Density, elem_univ)
+#     agregation(global_H,element,local_H,C_local)
     
     
     # print("Global H matrix: ")
@@ -679,24 +590,5 @@ for element in grid.elements:
     # for row in global_C:
     #     print(row)
         
-    solve_temperature(global_H,P_global)
-    
-    
-    
-    
+    # solve_temperature(global_H,P_global)
   
-#     # Wyświetlanie wyników dla elementów wczytanych z pliku
-#     for j, jakobian in enumerate(jakobians):
-#         print(f"Jakobian dla elementu: {element.ID}: \nw punkcie całkowania pc{j+1}: ")
-#         for row in jakobian.J:
-#             print(row)
-#         print("\nInverted Jakobian: ")
-#         for row in jakobian.J1:
-#             print(row)
-#         print(f"detJ: {jakobian.detJ}\n")
-
-
-#------DLA PRZYKLADOW TESTOWYCH----------------------------------------------
-# for jakobian in element.Jakobian:  # Loop through each Jacobian
-#         calcH(jakobian, elem_univ, k, npc) 
-
